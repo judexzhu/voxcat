@@ -1,0 +1,25 @@
+[project]
+name = "voxcat"
+version = "0.1.0"
+description = "Voice AI agent with swappable personas — brainstorm partner, SRE assistant, and more"
+readme = "README.md"
+authors = [
+    { name = "Jude Zhu", email = "judzhu@redhat.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.141.1",
+    "pipecat-ai-prebuilt>=1.0.6",
+    "pipecat-ai[google,silero,webrtc]>=1.8.0",
+    "python-dotenv>=1.2.3",
+    "pyyaml>=6.0.3",
+    "tavily-python>=0.5.0",
+    "uvicorn>=0.52.4",
+]
+
+[project.scripts]
+voxcat = "voxcat:main"
+
+[build-system]
+requires = ["uv_build>=0.12.6,<0.13.0"]
+build-backend = "uv_build"

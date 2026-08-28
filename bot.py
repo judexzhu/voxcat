@@ -1,0 +1,338 @@
+import os
+import signal
+from datetime import datetime
+from pathlib import Path
+
+import yaml
+from dotenv import load_dotenv
+from loguru import logger
+
+from pipecat.frames.frames import LLMRunFrame
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker, ProcessorUnusablePolicy
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import (
+    AssistantTurnStoppedMessage,
+    LLMContextAggregatorPair,
+    UserTurnMessageAddedMessage,
+)
+from pipecat.runner.types import RunnerArguments
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
+from pipecat.services.llm_service import FunctionCallParams
+from pipecat.transports.base_transport import BaseTransport, TransportParams
+from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
+from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
+from pipecat.workers.runner import WorkerRunner
+
+load_dotenv(override=True)
+
+
+def load_config():
+    config_path = Path(__file__).parent / "config.yaml"
+    with open(config_path) as f:
+        return yaml.safe_load(f)
+
+
+class TranscriptRecorder:
+    """Records conversation turns and generates summary at session end."""
+
+    def __init__(self, output_dir: str):
+        self._output_dir = Path(output_dir)
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        self._turns: list[dict] = []
+        self._session_start = datetime.now()
+        self._topic = "untitled"
+
+    def add_turn(self, role: str, content: str, timestamp: datetime | None = None):
+        self._turns.append({
+            "role": role,
+            "content": content,
+            "timestamp": timestamp or datetime.now(),
+        })
+
+    def set_topic(self, topic: str):
+        self._topic = topic
+
+    def save_transcript(self) -> Path:
+        date_str = self._session_start.strftime("%Y-%m-%d")
+        slug = self._topic.lower().replace(" ", "-")[:40]
+        filename = f"{date_str}-{slug}.md"
+        filepath = self._output_dir / filename
+
+        duration = datetime.now() - self._session_start
+        minutes = int(duration.total_seconds() // 60)
+
+        lines = [
+            f"# Brainstorm: {self._topic}",
+            f"**Date:** {date_str}  |  **Duration:** {minutes}m",
+            "",
+            "## Key Ideas",
+            "- *(review transcript below and fill in)*",
+            "",
+            "## Decisions Made",
+            "- *(review transcript below and fill in)*",
+            "",
+            "## Action Items",
+            "- [ ] *(review transcript below and fill in)*",
+            "",
+            "## Open Questions",
+            "- *(review transcript below and fill in)*",
+            "",
+            "## Raw Transcript",
+            "",
+        ]
+
+        for turn in self._turns:
+            ts = turn["timestamp"].strftime("%H:%M:%S")
+            role = turn["role"].capitalize()
+            lines.append(f"**[{ts}] {role}:** {turn['content']}")
+            lines.append("")
+
+        filepath.write_text("\n".join(lines))
+        return filepath
+
+    def get_transcript_text(self) -> str:
+        lines = []
+        for turn in self._turns:
+            ts = turn["timestamp"].strftime("%H:%M:%S")
+            lines.append(f"[{ts}] {turn['role'].capitalize()}: {turn['content']}")
+        return "\n".join(lines)
+
+
+async def web_search_handler(params: FunctionCallParams):
+    from tavily import AsyncTavilyClient
+
+    query = params.arguments["query"]
+    logger.info(f"WebSearch: {query}")
+    client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+    response = await client.search(query=query, max_results=5)
+    results = [
+        {"title": r["title"], "url": r["url"], "content": r["content"][:500]}
+        for r in response.get("results", [])
+    ]
+    await params.result_callback({"results": results})
+
+
+async def get_current_time_handler(params: FunctionCallParams):
+    now = datetime.now()
+    await params.result_callback({
+        "datetime": now.isoformat(),
+        "readable": now.strftime("%A, %B %d, %Y at %I:%M %p"),
+    })
+
+
+def build_tools(
+    builtin_tools: list[str], output_dir: str, recorder: TranscriptRecorder,
+) -> list[FunctionSchema]:
+    output_path = Path(output_dir).resolve()
+
+    async def web_read_handler(params: FunctionCallParams):
+        from tavily import AsyncTavilyClient
+
+        url = params.arguments["url"]
+        logger.info(f"WebRead: {url}")
+        client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+        response = await client.extract(urls=[url])
+        results = response.get("results", [])
+        content = results[0]["raw_content"][:5000] if results else "Failed to extract content"
+        await params.result_callback({"url": url, "content": content})
+
+    async def file_read_handler(params: FunctionCallParams):
+        filename = params.arguments["filename"]
+        path = (output_path / filename).resolve()
+        if not str(path).startswith(str(output_path)):
+            await params.result_callback({"error": "Access denied: path outside output directory"})
+            return
+        if not path.exists():
+            await params.result_callback({"error": f"File not found: {filename}"})
+            return
+        await params.result_callback({"filename": filename, "content": path.read_text()[:5000]})
+
+    async def file_write_handler(params: FunctionCallParams):
+        filename = params.arguments["filename"]
+        content = params.arguments["content"]
+        path = (output_path / filename).resolve()
+        if not str(path).startswith(str(output_path)):
+            await params.result_callback({"error": "Access denied: path outside output directory"})
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+        logger.info(f"File written: {path}")
+        await params.result_callback({"status": "saved", "path": str(path)})
+
+    async def file_list_handler(params: FunctionCallParams):
+        files = sorted(output_path.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
+        entries = [{"name": f.name, "size": f.stat().st_size} for f in files[:20]]
+        await params.result_callback({"directory": str(output_path), "files": entries})
+
+    async def summarize_handler(params: FunctionCallParams):
+        transcript = recorder.get_transcript_text()
+        if not transcript:
+            await params.result_callback({"error": "No transcript recorded yet"})
+            return
+        await params.result_callback({
+            "transcript": transcript[:10000],
+            "instruction": "Summarize into: Key Ideas, Decisions, Action Items, Open Questions",
+        })
+
+    available = {}
+
+    if os.environ.get("TAVILY_API_KEY"):
+        available["websearch"] = FunctionSchema(
+            name="web_search",
+            description="Search the web for real-time information, documentation, or any topic",
+            properties={"query": {"type": "string", "description": "Search query"}},
+            required=["query"], handler=web_search_handler,
+        )
+        available["web_read"] = FunctionSchema(
+            name="web_read",
+            description="Read and extract the full content of a web page given its URL",
+            properties={"url": {"type": "string", "description": "URL to read"}},
+            required=["url"], handler=web_read_handler,
+        )
+
+    available["file_read"] = FunctionSchema(
+        name="file_read",
+        description="Read a file from the session output directory (past transcripts, notes)",
+        properties={"filename": {"type": "string", "description": "Name of the file to read"}},
+        required=["filename"], handler=file_read_handler,
+    )
+    available["file_write"] = FunctionSchema(
+        name="file_write",
+        description="Save content to a file in the session output directory",
+        properties={
+            "filename": {"type": "string", "description": "Name of the file to save"},
+            "content": {"type": "string", "description": "Content to write"},
+        },
+        required=["filename", "content"], handler=file_write_handler,
+    )
+    available["file_list"] = FunctionSchema(
+        name="file_list",
+        description="List files in the session output directory",
+        properties={}, required=[], handler=file_list_handler,
+    )
+    available["summarize_session"] = FunctionSchema(
+        name="summarize_session",
+        description="Get the current session transcript for summarization. Summarize into: Key Ideas, Decisions Made, Action Items, and Open Questions",
+        properties={}, required=[], handler=summarize_handler,
+    )
+    available["get_current_time"] = FunctionSchema(
+        name="get_current_time",
+        description="Get the current date and time",
+        properties={}, required=[], handler=get_current_time_handler,
+    )
+
+    tools = []
+    for name in builtin_tools:
+        if name in available:
+            tools.append(available[name])
+            logger.info(f"Tool registered: {name}")
+        else:
+            logger.warning(f"Tool not available: {name} (missing API key or not implemented)")
+    return tools
+
+
+async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
+    config = load_config()
+
+    persona_name = config["persona"]["default"]
+    persona = config["persona"]["profiles"][persona_name]
+    system_instruction = persona["instruction"]
+    voice = config["voice"]["name"]
+    output_dir = persona.get("output", {}).get("directory", "brainstorms")
+    builtin_tools = persona.get("tools", {}).get("builtin", [])
+
+    recorder = TranscriptRecorder(output_dir)
+    tools = build_tools(builtin_tools, output_dir, recorder)
+    logger.info(f"Persona: {persona_name} | Tools: {len(tools)} | Output: {output_dir}")
+
+    llm = GeminiLiveLLMService(
+        api_key=os.environ["GOOGLE_API_KEY"],
+        settings=GeminiLiveLLMService.Settings(
+            system_instruction=system_instruction,
+            voice=voice,
+        ),
+    )
+
+    context = LLMContext(tools=tools)
+    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
+
+    pipeline = Pipeline([
+        transport.input(),
+        user_aggregator,
+        llm,
+        transport.output(),
+        assistant_aggregator,
+    ])
+
+    worker = PipelineWorker(
+        pipeline,
+        params=PipelineParams(
+            enable_metrics=True,
+            enable_usage_metrics=True,
+        ),
+        idle_timeout_secs=runner_args.pipeline_idle_timeout_secs,
+        processor_unusable_policy=ProcessorUnusablePolicy.END,
+    )
+
+    runner = WorkerRunner(handle_sigint=runner_args.handle_sigint)
+    await runner.add_workers(worker)
+
+    @transport.event_handler("on_client_connected")
+    async def on_client_connected(transport, client):
+        logger.info(f"Client connected — starting {persona_name} session")
+        context.add_message({
+            "role": "developer",
+            "content": "Greet the user briefly. Introduce yourself based on your role. "
+            "Ask what they'd like to work on today.",
+        })
+        await worker.queue_frames([LLMRunFrame()])
+
+    @transport.event_handler("on_client_disconnected")
+    async def on_client_disconnected(transport, client):
+        logger.info("Client disconnected")
+        filepath = recorder.save_transcript()
+        logger.info(f"Transcript saved to {filepath}")
+        await runner.cancel()
+
+    @user_aggregator.event_handler("on_user_turn_message_added")
+    async def on_user_turn_message_added(aggregator, message: UserTurnMessageAddedMessage):
+        recorder.add_turn("user", message.content, message.timestamp)
+        timestamp = f"[{message.timestamp}] " if message.timestamp else ""
+        logger.info(f"Transcript: {timestamp}user: {message.content}")
+
+    @assistant_aggregator.event_handler("on_assistant_turn_stopped")
+    async def on_assistant_turn_stopped(aggregator, message: AssistantTurnStoppedMessage):
+        recorder.add_turn("assistant", message.content, message.timestamp)
+        timestamp = f"[{message.timestamp}] " if message.timestamp else ""
+        logger.info(f"Transcript: {timestamp}assistant: {message.content}")
+
+    def handle_shutdown(signum, frame):
+        filepath = recorder.save_transcript()
+        logger.info(f"Transcript saved to {filepath}")
+
+    signal.signal(signal.SIGINT, handle_shutdown)
+
+    await runner.run()
+
+
+async def bot(runner_args: RunnerArguments):
+    """Main bot entry point compatible with Pipecat runner."""
+    webrtc_connection: SmallWebRTCConnection = runner_args.webrtc_connection
+
+    transport = SmallWebRTCTransport(
+        webrtc_connection=webrtc_connection,
+        params=TransportParams(
+            audio_in_enabled=True,
+            audio_out_enabled=True,
+        ),
+    )
+
+    await run_bot(transport, runner_args)
+
+
+if __name__ == "__main__":
+    from pipecat.runner.run import main
+
+    main()
