@@ -20,12 +20,15 @@ from pipecat.runner.types import RunnerArguments
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 from pipecat.services.llm_service import FunctionCallParams
+from pipecat.services.mcp_service import MCPClient
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 from pipecat.workers.runner import WorkerRunner
 
 load_dotenv(override=True)
+
+_persona_override: str | None = None
 
 
 def load_config():
@@ -84,7 +87,9 @@ class TranscriptRecorder:
         ]
 
         for turn in self._turns:
-            ts = turn["timestamp"].strftime("%H:%M:%S")
+            ts = turn["timestamp"]
+            if hasattr(ts, "strftime"):
+                ts = ts.strftime("%H:%M:%S")
             role = turn["role"].capitalize()
             lines.append(f"**[{ts}] {role}:** {turn['content']}")
             lines.append("")
@@ -95,7 +100,9 @@ class TranscriptRecorder:
     def get_transcript_text(self) -> str:
         lines = []
         for turn in self._turns:
-            ts = turn["timestamp"].strftime("%H:%M:%S")
+            ts = turn["timestamp"]
+            if hasattr(ts, "strftime"):
+                ts = ts.strftime("%H:%M:%S")
             lines.append(f"[{ts}] {turn['role'].capitalize()}: {turn['content']}")
         return "\n".join(lines)
 
@@ -120,6 +127,24 @@ async def get_current_time_handler(params: FunctionCallParams):
         "datetime": now.isoformat(),
         "readable": now.strftime("%A, %B %d, %Y at %I:%M %p"),
     })
+
+
+async def deep_analysis_handler(params: FunctionCallParams):
+    from google import genai
+
+    query = params.arguments["query"]
+    context = params.arguments.get("context", "")
+    logger.info(f"DeepAnalysis: {query[:100]}")
+    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+    prompt = f"{query}\n\nContext:\n{context}" if context else query
+    response = await client.aio.models.generate_content(
+        model="gemini-3.7-flash",
+        contents=prompt,
+        config=genai.types.GenerateContentConfig(
+            thinking_config=genai.types.ThinkingConfig(thinking_budget=8192),
+        ),
+    )
+    await params.result_callback({"analysis": response.text[:5000]})
 
 
 def build_tools(
@@ -222,6 +247,15 @@ def build_tools(
         description="Get the current date and time",
         properties={}, required=[], handler=get_current_time_handler,
     )
+    available["deep_analysis"] = FunctionSchema(
+        name="deep_analysis",
+        description="Send a complex question to a powerful reasoning model for deep analysis. Use for root cause analysis, complex troubleshooting, or when you need thorough reasoning",
+        properties={
+            "query": {"type": "string", "description": "The question or analysis request"},
+            "context": {"type": "string", "description": "Supporting context (case details, logs, error messages)"},
+        },
+        required=["query"], handler=deep_analysis_handler,
+    )
 
     tools = []
     for name in builtin_tools:
@@ -233,18 +267,72 @@ def build_tools(
     return tools
 
 
+async def connect_mcp_servers(
+    server_names: list[str], mcp_config: dict,
+) -> tuple[list, list[MCPClient]]:
+    from mcp import StdioServerParameters
+
+    all_tools = []
+    clients = []
+    for name in server_names:
+        server = mcp_config.get(name)
+        if not server:
+            logger.warning(f"MCP server not configured: {name}")
+            continue
+        env_keys = server.get("env_keys", [])
+        missing = [k for k in env_keys if not os.environ.get(k)]
+        if missing:
+            logger.warning(f"MCP server {name} skipped: missing env vars {missing}")
+            continue
+        env = {k: os.environ[k] for k in env_keys if os.environ.get(k)}
+        env["PATH"] = os.environ.get("PATH", "")
+        cwd = server.get("cwd")
+        client = MCPClient(
+            server_params=StdioServerParameters(
+                command=server["command"],
+                args=server.get("args", []),
+                env=env,
+                cwd=cwd,
+            ),
+            tools_filter=server.get("read_only_tools"),
+        )
+        try:
+            mcp_tools = await client.tools()
+            tool_list = mcp_tools.standard_tools
+            all_tools.extend(tool_list)
+            clients.append(client)
+            logger.info(f"MCP server {name}: {len(tool_list)} tools registered")
+        except Exception as e:
+            logger.error(f"MCP server {name} failed to connect: {e}")
+    return all_tools, clients
+
+
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     config = load_config()
 
-    persona_name = config["persona"]["default"]
+    global _persona_override
+    body = runner_args.body or {}
+    persona_name = _persona_override or body.get("persona") or config["persona"]["default"]
+    _persona_override = None
+    if persona_name not in config["persona"]["profiles"]:
+        logger.warning(f"Unknown persona '{persona_name}', falling back to default")
+        persona_name = config["persona"]["default"]
     persona = config["persona"]["profiles"][persona_name]
     system_instruction = persona["instruction"]
     voice = config["voice"]["name"]
     output_dir = persona.get("output", {}).get("directory", "brainstorms")
     builtin_tools = persona.get("tools", {}).get("builtin", [])
+    mcp_server_names = persona.get("tools", {}).get("mcp_servers", [])
 
     recorder = TranscriptRecorder(output_dir)
     tools = build_tools(builtin_tools, output_dir, recorder)
+
+    mcp_clients = []
+    if mcp_server_names:
+        mcp_config = config.get("mcp_servers", {})
+        mcp_tools, mcp_clients = await connect_mcp_servers(mcp_server_names, mcp_config)
+        tools.extend(mcp_tools)
+
     logger.info(f"Persona: {persona_name} | Tools: {len(tools)} | Output: {output_dir}")
 
     llm = GeminiLiveLLMService(
@@ -294,6 +382,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.info("Client disconnected")
         filepath = recorder.save_transcript()
         logger.info(f"Transcript saved to {filepath}")
+        for mc in mcp_clients:
+            await mc.close()
         await runner.cancel()
 
     @user_aggregator.event_handler("on_user_turn_message_added")
@@ -333,6 +423,21 @@ async def bot(runner_args: RunnerArguments):
 
 
 if __name__ == "__main__":
-    from pipecat.runner.run import main
+    from pipecat.runner.run import app, main
+
+    config = load_config()
+    available_personas = list(config["persona"]["profiles"].keys())
+
+    @app.get("/api/personas")
+    async def list_personas():
+        return {"personas": available_personas, "default": config["persona"]["default"]}
+
+    @app.post("/api/persona/{name}")
+    async def set_persona(name: str):
+        global _persona_override
+        if name not in available_personas:
+            return {"error": f"Unknown persona: {name}", "available": available_personas}
+        _persona_override = name
+        return {"persona": name, "status": "set for next connection"}
 
     main()

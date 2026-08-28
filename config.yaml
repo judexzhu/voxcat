@@ -1,7 +1,37 @@
 # Voxcat Configuration
 
 voice:
-  name: "Aoede"  # Options: Puck, Charon, Kore, Fenrir, Aoede
+  name: "Aoede" # Options: Puck, Charon, Kore, Fenrir, Aoede
+
+mcp_servers:
+  redhat:
+    command: "uv"
+    args: ["run", "python", "-m", "redhat_api_mcp.server"]
+    cwd: "/Users/judzhu/Documents/github.com/redhat-api-mcp"
+    env_keys: [RH_API_OFFLINE_TOKEN]
+    read_only_tools:
+      - search_cases
+      - get_case
+      - search_kcs
+      - get_kcs
+      - search_docs
+      - get_doc
+      - search_cve
+      - get_cve
+      - search_errata
+      - get_errata
+      - list_attachments
+      - get_attachment
+      - list_operator_bundles
+  jira:
+    command: "uv"
+    args: ["run", "python", "jira_mcp_server.py"]
+    cwd: "/Users/judzhu/Documents/github.com/mcp-jira"
+    env_keys: [JIRA_SERVER_URL, JIRA_API_TOKEN, JIRA_USER_EMAIL]
+    read_only_tools:
+      - jira_search_issues
+      - jira_get_issue
+      - jira_get_create_meta
 
 persona:
   default: "thinking-partner"
@@ -16,7 +46,18 @@ persona:
         When asked to save notes, use file_write immediately.
         When asked to wrap up or summarize, call summarize_session and give a structured summary.
       tools:
-        builtin: [websearch, web_read, file_read, file_write, file_list, summarize_session, get_current_time]
+        builtin:
+          [
+            websearch,
+            web_read,
+            file_read,
+            file_write,
+            file_list,
+            summarize_session,
+            get_current_time,
+            deep_analysis,
+          ]
+        mcp_servers: []
       output:
         directory: "brainstorms"
     devils-advocate:
@@ -28,7 +69,18 @@ persona:
         Push back hard, but always explain why.
         When asked to save notes, use file_write immediately.
       tools:
-        builtin: [websearch, web_read, file_read, file_write, file_list, summarize_session, get_current_time]
+        builtin:
+          [
+            websearch,
+            web_read,
+            file_read,
+            file_write,
+            file_list,
+            summarize_session,
+            get_current_time,
+            deep_analysis,
+          ]
+        mcp_servers: []
       output:
         directory: "brainstorms"
     note-taker:
@@ -40,7 +92,18 @@ persona:
         When asked about facts, call web_search immediately.
         When asked to wrap up, call summarize_session and save the result with file_write.
       tools:
-        builtin: [websearch, web_read, file_read, file_write, file_list, summarize_session, get_current_time]
+        builtin:
+          [
+            websearch,
+            web_read,
+            file_read,
+            file_write,
+            file_list,
+            summarize_session,
+            get_current_time,
+            deep_analysis,
+          ]
+        mcp_servers: []
       output:
         directory: "brainstorms"
     sre:
@@ -48,14 +111,26 @@ persona:
         You are a Platform SRE voice assistant. Keep responses to 1-2 sentences.
         When the user mentions an error, alert, or incident — call web_search immediately with the error message.
         When you find relevant documentation or KCS articles, call web_read to get full content.
+        You have access to Red Hat case tools and Jira — use them when asked about cases or tickets.
         Don't speculate about root causes — search first, then summarize findings.
         When asked to document findings, use file_write to save a case report.
         When asked what time it is or for timestamps, call get_current_time.
         When asked to wrap up, call summarize_session and offer to save.
       tools:
-        builtin: [websearch, web_read, file_read, file_write, file_list, summarize_session, get_current_time]
+        builtin:
+          [
+            websearch,
+            web_read,
+            file_read,
+            file_write,
+            file_list,
+            summarize_session,
+            get_current_time,
+            deep_analysis,
+          ]
+        mcp_servers: [redhat, jira]
       output:
-        directory: "sessions"
+        directory: "redhat"
 
 server:
   host: "0.0.0.0"
