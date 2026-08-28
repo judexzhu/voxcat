@@ -147,6 +147,51 @@ async def deep_analysis_handler(params: FunctionCallParams):
     await params.result_callback({"analysis": response.text[:5000]})
 
 
+async def research_handler(params: FunctionCallParams):
+    from google import genai
+    from tavily import AsyncTavilyClient
+
+    topic = params.arguments["topic"]
+    logger.info(f"Research: {topic}")
+    tavily = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+
+    search_response = await tavily.search(query=topic, max_results=5)
+    results = search_response.get("results", [])
+    logger.info(f"Research: found {len(results)} search results")
+
+    urls = [r["url"] for r in results[:3]]
+    extracted = []
+    if urls:
+        extract_response = await tavily.extract(urls=urls)
+        for r in extract_response.get("results", []):
+            extracted.append({"url": r["url"], "content": r["raw_content"][:3000]})
+    logger.info(f"Research: extracted {len(extracted)} pages")
+
+    sources_text = "\n\n".join(
+        f"Source: {e['url']}\n{e['content']}" for e in extracted
+    )
+    snippets_text = "\n".join(
+        f"- {r['title']}: {r['content'][:200]}" for r in results
+    )
+
+    prompt = (
+        f"Research topic: {topic}\n\n"
+        f"Search snippets:\n{snippets_text}\n\n"
+        f"Full page content:\n{sources_text}\n\n"
+        "Synthesize a structured research report with: Key Findings, Details, Sources, and Open Questions."
+    )
+
+    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+    response = await client.aio.models.generate_content(
+        model="gemini-3.7-flash",
+        contents=prompt,
+        config=genai.types.GenerateContentConfig(
+            thinking_config=genai.types.ThinkingConfig(thinking_budget=8192),
+        ),
+    )
+    await params.result_callback({"report": response.text[:5000]})
+
+
 def build_tools(
     builtin_tools: list[str], output_dir: str, recorder: TranscriptRecorder,
 ) -> list[FunctionSchema]:
@@ -256,6 +301,15 @@ def build_tools(
         },
         required=["query"], handler=deep_analysis_handler,
     )
+    if os.environ.get("TAVILY_API_KEY"):
+        available["research"] = FunctionSchema(
+            name="research",
+            description="Research a topic thoroughly: search the web, read top sources, and synthesize a structured report with Key Findings, Details, Sources, and Open Questions. Takes 10-15 seconds.",
+            properties={
+                "topic": {"type": "string", "description": "The topic or question to research"},
+            },
+            required=["topic"], handler=research_handler,
+        )
 
     tools = []
     for name in builtin_tools:
@@ -318,7 +372,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.warning(f"Unknown persona '{persona_name}', falling back to default")
         persona_name = config["persona"]["default"]
     persona = config["persona"]["profiles"][persona_name]
-    system_instruction = persona["instruction"]
+    common = config["persona"].get("common_instruction", "")
+    system_instruction = persona["instruction"] + "\n" + common if common else persona["instruction"]
     voice = config["voice"]["name"]
     output_dir = persona.get("output", {}).get("directory", "brainstorms")
     builtin_tools = persona.get("tools", {}).get("builtin", [])
