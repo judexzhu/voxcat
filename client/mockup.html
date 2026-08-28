@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voxcat — UI Mockup v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #09090b;
+    --surface: rgba(255,255,255,0.03);
+    --surface-hover: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.06);
+    --text: #fafafa;
+    --text-secondary: rgba(255,255,255,0.55);
+    --text-dim: rgba(255,255,255,0.3);
+    --accent: #8b5cf6;
+    --accent-dim: rgba(139,92,246,0.15);
+    --green: #22c55e;
+    --red: #ef4444;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ——— Top bar ——— */
+  .topbar {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 48px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .separator { width: 1px; height: 16px; background: var(--border); }
+
+  .persona-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .topbar-spacer { flex: 1; }
+
+  /* Mini orb in topbar */
+  .mini-orb-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mini-orb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #a78bfa, #7c3aed 60%, #4c1d95);
+    box-shadow: 0 0 16px rgba(139,92,246,0.35);
+    animation: miniPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes miniPulse {
+    0%, 100% { box-shadow: 0 0 16px rgba(139,92,246,0.35); transform: scale(1); }
+    50% { box-shadow: 0 0 24px rgba(139,92,246,0.5); transform: scale(1.08); }
+  }
+
+  .listening-label {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .ctrl-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .ctrl-btn:hover { background: var(--surface-hover); }
+  .ctrl-btn.end { border-color: rgba(239,68,68,0.2); color: var(--red); }
+
+  /* ——— Main content ——— */
+  .main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ——— Activity panel (center/left) ——— */
+  .activity-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .pane-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  .pane-tab {
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .pane-tab.active {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+
+  .activity-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px;
+  }
+
+  .activity-scroll::-webkit-scrollbar { width: 4px; }
+  .activity-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  .entry {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .entry:hover { background: var(--surface); }
+
+  .entry-meta {
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .entry-meta.user { color: var(--green); }
+  .entry-meta.bot { color: var(--accent); }
+
+  .entry-time { color: var(--text-dim); font-weight: 400; font-size: 10px; }
+  .entry-text { color: var(--text-secondary); }
+
+  .entry-tool {
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 4px;
+  }
+
+  .tool-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .tool-badge {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .tool-name { font-size: 11px; color: var(--text-dim); }
+  .tool-duration { margin-left: auto; font-size: 10px; color: var(--text-dim); }
+
+  .tool-body {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.55;
+    max-height: 150px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .tool-body::-webkit-scrollbar { width: 3px; }
+  .tool-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  /* ——— File panel (right sidebar) ——— */
+  .resize-handle {
+    width: 5px;
+    cursor: col-resize;
+    background: rgba(255,255,255,0.04);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .resize-handle:hover, .resize-handle.dragging {
+    background: var(--accent);
+  }
+
+  .resize-handle::before {
+    content: '·\A·\A·';
+    white-space: pre;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8px;
+    line-height: 6px;
+    color: rgba(255,255,255,0.2);
+    pointer-events: none;
+  }
+
+  .resize-handle::after {
+    content: '';
+    position: absolute;
+    inset: 0 -6px;
+  }
+
+  .file-pane {
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .file-pane-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+  }
+
+  .file-split {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .file-tree {
+    width: 140px;
+    border-right: 1px solid var(--border);
+    padding: 6px 0;
+    overflow-y: auto;
+    font-size: 12px;
+  }
+
+  .folder-row {
+    padding: 4px 10px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .folder-row:hover { background: var(--surface); }
+  .folder-chevron { font-size: 9px; color: var(--text-dim); width: 10px; }
+  .folder-count { margin-left: auto; font-size: 9px; color: var(--text-dim); font-weight: 400; }
+
+  .tree-file {
+    padding: 3px 10px 3px 24px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tree-file:hover { color: var(--text); background: var(--surface); }
+  .tree-file.active { color: var(--text); background: var(--accent-dim); }
+
+  .file-preview {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  .file-preview::-webkit-scrollbar { width: 3px; }
+  .file-preview::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  .file-preview h1 { font-size: 16px; color: var(--text); margin-bottom: 8px; font-weight: 600; }
+  .file-preview h2 { font-size: 13px; color: var(--accent); margin: 12px 0 4px; font-weight: 600; }
+  .file-preview p { margin: 4px 0; }
+  .file-preview ul { padding-left: 18px; margin: 4px 0; }
+  .file-preview li { margin: 2px 0; }
+  .file-preview strong { color: var(--text); }
+
+  /* ——— Responsive: hide file pane on small screens ——— */
+  @media (max-width: 900px) {
+    .file-pane { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="logo">Voxcat</div>
+    <div class="separator"></div>
+    <div class="persona-pill">SRE Assistant</div>
+    <div class="topbar-spacer"></div>
+    <div class="mini-orb-wrapper">
+      <div class="mini-orb"></div>
+      <span class="listening-label">Listening</span>
+    </div>
+    <div class="separator"></div>
+    <button class="ctrl-btn" title="Mute">🎤</button>
+    <button class="ctrl-btn end" title="End">✕</button>
+  </div>
+
+  <div class="main">
+    <!-- Activity (center) -->
+    <div class="activity-pane">
+      <div class="activity-scroll">
+        <div class="entry">
+          <div class="entry-meta user">You <span class="entry-time">2:14 PM</span></div>
+          <div class="entry-text">Can you look up case 04472884 and check what the root cause was?</div>
+        </div>
+
+        <div class="entry-tool">
+          <div class="tool-header">
+            <span class="tool-badge">Tool</span>
+            <span class="tool-name">get_case</span>
+            <span class="tool-duration">1.2s</span>
+          </div>
+          <div class="tool-body">
+            <strong>Case 04472884</strong> — ARO HCP cluster nodes reporting OOM kills on etcd pods.<br>
+            Severity 2 | Customer: Adobe | Cluster: 2p09uvdq3qj...<br><br>
+            <strong>Root Cause:</strong> Memory limits set too low for etcd in HCP topology. Default 512Mi insufficient for clusters with 500+ namespaces.<br>
+            <strong>Fix:</strong> Bump etcd memory to 2Gi via HostedCluster spec.
+          </div>
+        </div>
+
+        <div class="entry">
+          <div class="entry-meta bot">Voxcat <span class="entry-time">2:14 PM</span></div>
+          <div class="entry-text">Found the case. Severity 2 for Adobe — etcd OOM kills on ARO HCP. Root cause: memory limits too low for 500+ namespace clusters. Fix was bumping etcd to 2Gi.</div>
+        </div>
+
+        <div class="entry">
+          <div class="entry-meta user">You <span class="entry-time">2:15 PM</span></div>
+          <div class="entry-text">Search KCS for similar etcd OOM articles</div>
+        </div>
+
+        <div class="entry-tool">
+          <div class="tool-header">
+            <span class="tool-badge">Tool</span>
+            <span class="tool-name">search_kcs</span>
+            <span class="tool-duration">0.8s</span>
+          </div>
+          <div class="tool-body">
+            <strong>3 results:</strong><br>
+            - <strong>KCS 7045234:</strong> etcd memory usage grows with namespace count<br>
+            - <strong>KCS 6891022:</strong> Tuning etcd resource limits on HCP<br>
+            - <strong>KCS 7102891:</strong> OOM troubleshooting for control plane pods
+          </div>
+        </div>
+
+        <div class="entry">
+          <div class="entry-meta bot">Voxcat <span class="entry-time">2:15 PM</span></div>
+          <div class="entry-text">Found 3 relevant KCS articles. The first one directly covers etcd memory scaling. Want me to read the full article or save a case report?</div>
+        </div>
+
+        <div class="entry">
+          <div class="entry-meta user">You <span class="entry-time">2:15 PM</span></div>
+          <div class="entry-text">Do a deep analysis on why etcd memory scales with namespace count</div>
+        </div>
+
+        <div class="entry-tool">
+          <div class="tool-header">
+            <span class="tool-badge">Tool</span>
+            <span class="tool-name">deep_analysis</span>
+            <span class="tool-duration">8.3s</span>
+          </div>
+          <div class="tool-body">
+            <strong>Analysis: etcd Memory Scaling</strong><br><br>
+            etcd stores all Kubernetes objects in a single bbolt database. Each namespace creates entries in multiple indices: namespace index, resource version index, and key-range index.<br><br>
+            <strong>Key factors:</strong><br>
+            - Each namespace adds ~2-5KB of index overhead<br>
+            - 500 namespaces = ~1-2.5MB additional index memory<br>
+            - Watch caches multiply this by active watcher count<br>
+            - HCP topology concentrates more objects per etcd instance<br><br>
+            <strong>Recommendation:</strong> Scale etcd memory as: base (256Mi) + 2MB per 100 namespaces + 20% headroom.
+          </div>
+        </div>
+
+        <div class="entry">
+          <div class="entry-meta bot">Voxcat <span class="entry-time">2:16 PM</span></div>
+          <div class="entry-text">Analysis complete. Each namespace adds 2-5KB of index overhead in etcd's bbolt database. With watch caches, 500 namespaces can push memory well past 512Mi. Recommended formula: base 256Mi plus 2MB per 100 namespaces plus 20% headroom.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resize handle -->
+    <div class="resize-handle" id="resize-handle"></div>
+
+    <!-- File panel (right) -->
+    <div class="file-pane" id="file-pane">
+      <div class="file-pane-header">
+        <span>Files</span>
+        <button class="ctrl-btn" style="width:24px;height:24px;font-size:12px;" title="Refresh">↻</button>
+      </div>
+      <div class="file-split">
+        <div class="file-tree">
+          <div class="folder-row"><span class="folder-chevron">▾</span> SRE Assistant <span class="folder-count">3</span></div>
+          <div class="tree-file active">case-04472884.md</div>
+          <div class="tree-file">etcd-oom-notes.md</div>
+          <div class="tree-file">session-08-28.md</div>
+          <div class="folder-row"><span class="folder-chevron">▸</span> Thinking Partner <span class="folder-count">1</span></div>
+          <div class="folder-row"><span class="folder-chevron">▸</span> Devil's Advocate <span class="folder-count">0</span></div>
+          <div class="folder-row"><span class="folder-chevron">▸</span> Note Taker <span class="folder-count">0</span></div>
+        </div>
+        <div class="file-preview">
+          <h1>Case 04472884</h1>
+          <h2>Summary</h2>
+          <p>Adobe ARO HCP cluster — etcd OOM kills. Severity 2.</p>
+          <h2>Root Cause</h2>
+          <p>Default etcd memory limit (512Mi) insufficient for clusters with <strong>500+ namespaces</strong>. Memory scales linearly with namespace and object count.</p>
+          <h2>Resolution</h2>
+          <ul>
+            <li>Increased etcd memory to <strong>2Gi</strong></li>
+            <li>Applied via HostedCluster spec override</li>
+          </ul>
+          <h2>Action Items</h2>
+          <ul>
+            <li>File Jira to update default etcd limits</li>
+            <li>Update internal runbook</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const handle = document.getElementById('resize-handle');
+const pane = document.getElementById('file-pane');
+let dragging = false;
+
+handle.addEventListener('mousedown', (e) => {
+  dragging = true;
+  handle.classList.add('dragging');
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const newWidth = window.innerWidth - e.clientX;
+  const minW = 150;
+  const maxW = window.innerWidth * 0.7;
+  if (newWidth >= minW && newWidth <= maxW) {
+    pane.style.width = newWidth + 'px';
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (dragging) {
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+});
+</script>
+
+</body>
+</html>

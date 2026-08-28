@@ -2,6 +2,6 @@
 __pycache__/
 *.pyc
 .venv/
-brainstorms/
-redhat/
-sessions/
+output/
+client/node_modules/
+client/dist/

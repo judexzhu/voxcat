@@ -10,6 +10,7 @@ from loguru import logger
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker, ProcessorUnusablePolicy
+from pipecat.processors.frameworks.rtvi import RTVIFunctionCallReportLevel, RTVIObserverParams
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     AssistantTurnStoppedMessage,
@@ -28,7 +29,6 @@ from pipecat.workers.runner import WorkerRunner
 
 load_dotenv(override=True)
 
-_persona_override: str | None = None
 
 
 def load_config():
@@ -246,7 +246,7 @@ def build_tools(
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
         logger.info(f"File written: {path}")
-        await params.result_callback({"status": "saved", "path": str(path)})
+        await params.result_callback({"status": "saved", "path": str(path), "content": content[:3000]})
 
     async def file_list_handler(params: FunctionCallParams):
         files = sorted(output_path.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
@@ -392,10 +392,8 @@ async def connect_mcp_servers(
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     config = load_config()
 
-    global _persona_override
     body = runner_args.body or {}
-    persona_name = _persona_override or body.get("persona") or config["persona"]["default"]
-    _persona_override = None
+    persona_name = body.get("persona") or config["persona"]["default"]
     if persona_name not in config["persona"]["profiles"]:
         logger.warning(f"Unknown persona '{persona_name}', falling back to default")
         persona_name = config["persona"]["default"]
@@ -442,6 +440,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         params=PipelineParams(
             enable_metrics=True,
             enable_usage_metrics=True,
+        ),
+        rtvi_observer_params=RTVIObserverParams(
+            function_call_report_level={"*": RTVIFunctionCallReportLevel.FULL},
         ),
         idle_timeout_secs=runner_args.pipeline_idle_timeout_secs,
         processor_unusable_policy=ProcessorUnusablePolicy.END,
@@ -506,6 +507,8 @@ async def bot(runner_args: RunnerArguments):
 
 
 if __name__ == "__main__":
+    from fastapi.staticfiles import StaticFiles
+
     from pipecat.runner.run import app, main
 
     config = load_config()
@@ -515,12 +518,56 @@ if __name__ == "__main__":
     async def list_personas():
         return {"personas": available_personas, "default": config["persona"]["default"]}
 
-    @app.post("/api/persona/{name}")
-    async def set_persona(name: str):
-        global _persona_override
-        if name not in available_personas:
-            return {"error": f"Unknown persona: {name}", "available": available_personas}
-        _persona_override = name
-        return {"persona": name, "status": "set for next connection"}
+    @app.get("/api/files/tree")
+    async def file_tree():
+        tree = []
+        for name in available_personas:
+            profile = config["persona"]["profiles"][name]
+            output_dir = Path(profile.get("output", {}).get("directory", f"output/{name}"))
+            output_dir.mkdir(parents=True, exist_ok=True)
+            files = sorted(output_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
+            tree.append({
+                "persona": name,
+                "label": {"thinking-partner": "Thinking Partner", "devils-advocate": "Devil's Advocate",
+                          "note-taker": "Note Taker", "sre": "SRE Assistant"}.get(name, name),
+                "files": [
+                    {"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
+                    for f in files[:50] if f.is_file()
+                ],
+            })
+        return {"tree": tree}
+
+    @app.get("/api/files")
+    async def list_files(persona: str = "thinking-partner"):
+        profile = config["persona"]["profiles"].get(persona, {})
+        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
+        output_dir.mkdir(parents=True, exist_ok=True)
+        files = sorted(output_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
+        return {
+            "directory": str(output_dir),
+            "files": [
+                {"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
+                for f in files[:50] if f.is_file()
+            ],
+        }
+
+    @app.get("/api/files/{filename:path}")
+    async def read_file(filename: str, persona: str = "thinking-partner"):
+        profile = config["persona"]["profiles"].get(persona, {})
+        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms")).resolve()
+        path = (output_dir / filename).resolve()
+        if not str(path).startswith(str(output_dir)) or not path.exists():
+            return {"error": "File not found"}
+        return {"filename": filename, "content": path.read_text()[:10000]}
+
+    client_dist = Path(__file__).parent / "client" / "dist"
+    if client_dist.is_dir():
+        app.mount("/client", StaticFiles(directory=str(client_dist), html=True))
+
+        from fastapi.responses import RedirectResponse
+
+        @app.get("/", include_in_schema=False)
+        async def root_redirect():
+            return RedirectResponse(url="/client/")
 
     main()

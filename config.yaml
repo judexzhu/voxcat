@@ -63,7 +63,7 @@ persona:
           ]
         mcp_servers: []
       output:
-        directory: "brainstorms"
+        directory: "output/thinking-partner"
     devils-advocate:
       instruction: |
         You are a devil's advocate.
@@ -85,7 +85,7 @@ persona:
           ]
         mcp_servers: []
       output:
-        directory: "brainstorms"
+        directory: "output/devils-advocate"
     note-taker:
       instruction: |
         You are a structured note-taker. Brief responses only.
@@ -108,7 +108,7 @@ persona:
           ]
         mcp_servers: []
       output:
-        directory: "brainstorms"
+        directory: "output/note-taker"
     sre:
       instruction: |
         You are a Platform SRE voice assistant. 1-2 sentences max per response.
@@ -135,7 +135,7 @@ persona:
           ]
         mcp_servers: [redhat, jira]
       output:
-        directory: "redhat"
+        directory: "output/sre"
 
 server:
   host: "0.0.0.0"
