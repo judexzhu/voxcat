@@ -769,6 +769,15 @@ wheels = [
 ]
 
 [[package]]
+name = "filelock"
+version = "3.32.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/30/03b03951873a1a0ffc7e8ca0e10c15597b59e8d0e39260704cd2ea087bc4/filelock-3.32.4.tar.gz", hash = "sha256:2bde2e4cf732e0153406d8a7bc80620ecf5e621fe0d25e41143c4e3b4733ff30", size = 222126, upload-time = "2026-08-23T17:37:55.363Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/01/a4/9b63d595d748e3aff8812b65eacc1a2c4bd90b7c2012e08e72373b4835eb/filelock-3.32.4-py3-none-any.whl", hash = "sha256:22e58ca3b1ae3b98993b762d7338367ae64fe50252bf78d59da3bfebcdf1cedd", size = 99864, upload-time = "2026-08-23T17:37:53.913Z" },
+]
+
+[[package]]
 name = "flatbuffers"
 version = "25.12.19"
 source = { registry = "https://pypi.org/simple" }
@@ -1491,6 +1500,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/e6/fe51d2bb1a3b446f59c5c8165999a9fee208bc346af90a7cbf7657bc0d75/nltk-3.10.3.tar.gz", hash = "sha256:bb9327a461c3811c2fa4900e03840401f2126adfb30c0072827c433bd2444ea4", size = 5137152, upload-time = "2026-08-12T23:46:37.258Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b6/6d/ebd2af4640b12168fdf0cb74b6118df2f32a2f62ec7e0c06fbfd80706639/nltk-3.10.3-py3-none-any.whl", hash = "sha256:ff9598a8e20518ee0d557745890cc4435b9578489e2dcbc69c4f81fa060caf7c", size = 1798643, upload-time = "2026-08-12T23:44:13.478Z" },
+]
+
+[[package]]
+name = "notebooklm-py"
+version = "0.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "filelock" },
+    { name = "httpx" },
+    { name = "rich" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/ff/5c352c1bf66a0f5ae59157ceb544991d5733ef379d4e17bc70253c22fda4/notebooklm_py-0.8.1.tar.gz", hash = "sha256:43ba51a9609a9530bfcd9ad06c1035edeac4b0e40156a5a7ee7ee302621666cd", size = 16334264, upload-time = "2026-08-14T15:00:29.158Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/82/bca1ba131ba994675dfd44cf7f731f9725e0265b056ad8b6bdc0467c9201/notebooklm_py-0.8.1-py3-none-any.whl", hash = "sha256:4d7bc3e16bedde8296a85aa0376a69e49c744d82ffa9836447c584353e2001d8", size = 1617300, upload-time = "2026-08-14T15:00:26.95Z" },
 ]
 
 [[package]]
@@ -2743,6 +2767,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "notebooklm-py" },
     { name = "pipecat-ai", extra = ["google", "mcp", "webrtc"] },
     { name = "pipecat-ai-prebuilt" },
     { name = "python-dotenv" },
@@ -2754,6 +2779,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1" },
+    { name = "notebooklm-py", specifier = ">=0.8.1" },
     { name = "pipecat-ai", extras = ["google", "mcp", "silero", "webrtc"], specifier = ">=1.8.0" },
     { name = "pipecat-ai-prebuilt", specifier = ">=1.0.6" },
     { name = "python-dotenv", specifier = ">=1.2.3" },

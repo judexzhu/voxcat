@@ -192,6 +192,23 @@ async def research_handler(params: FunctionCallParams):
     await params.result_callback({"report": response.text[:5000]})
 
 
+async def notebooklm_sync_handler(params: FunctionCallParams):
+    from notebooklm import NotebookLMClient
+
+    title = params.arguments["title"]
+    content = params.arguments["content"]
+    notebook_id = os.environ.get("NOTEBOOKLM_NOTEBOOK_ID", "")
+    if not notebook_id:
+        await params.result_callback({"error": "NOTEBOOKLM_NOTEBOOK_ID not set"})
+        return
+    logger.info(f"NotebookLM sync: {title}")
+    async with NotebookLMClient.from_storage() as client:
+        await client.sources.add_text(
+            notebook_id=notebook_id, title=title, content=content, wait=True,
+        )
+    await params.result_callback({"status": "synced", "notebook_id": notebook_id, "title": title})
+
+
 def build_tools(
     builtin_tools: list[str], output_dir: str, recorder: TranscriptRecorder,
 ) -> list[FunctionSchema]:
@@ -309,6 +326,17 @@ def build_tools(
                 "topic": {"type": "string", "description": "The topic or question to research"},
             },
             required=["topic"], handler=research_handler,
+        )
+
+    if os.environ.get("NOTEBOOKLM_NOTEBOOK_ID"):
+        available["notebooklm_sync"] = FunctionSchema(
+            name="notebooklm_sync",
+            description="Sync a document to Google NotebookLM as a text source. Use for archiving case reports, research findings, or session summaries to the knowledge base.",
+            properties={
+                "title": {"type": "string", "description": "Title of the document"},
+                "content": {"type": "string", "description": "Full markdown content to sync"},
+            },
+            required=["title", "content"], handler=notebooklm_sync_handler,
         )
 
     tools = []

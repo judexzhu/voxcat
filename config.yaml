@@ -40,6 +40,7 @@ persona:
     Factual question → call web_search. Never guess.
     URL in search results looks useful → call web_read on it.
     User says "wrap up", "summarize", "done" → call summarize_session.
+    User says "sync to notebook", "push to NotebookLM", or "archive this" → call notebooklm_sync with the content.
   profiles:
     thinking-partner:
       instruction: |
@@ -58,6 +59,7 @@ persona:
             get_current_time,
             deep_analysis,
             research,
+            notebooklm_sync,
           ]
         mcp_servers: []
       output:
@@ -79,6 +81,7 @@ persona:
             get_current_time,
             deep_analysis,
             research,
+            notebooklm_sync,
           ]
         mcp_servers: []
       output:
@@ -101,6 +104,7 @@ persona:
             get_current_time,
             deep_analysis,
             research,
+            notebooklm_sync,
           ]
         mcp_servers: []
       output:
@@ -127,6 +131,7 @@ persona:
             get_current_time,
             deep_analysis,
             research,
+            notebooklm_sync,
           ]
         mcp_servers: [redhat, jira]
       output:
