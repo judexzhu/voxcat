@@ -18,7 +18,12 @@ else
     echo "Using pre-built frontend (client/dist/)"
 fi
 
-# Environment file
+# Configuration files
+if [ ! -f config.yaml ]; then
+    cp config.yaml.example config.yaml
+    echo "Created config.yaml from template."
+fi
+
 if [ ! -f .env ]; then
     cp .env.example .env
     echo ""

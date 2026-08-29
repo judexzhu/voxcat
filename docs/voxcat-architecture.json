@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Voxcat Architecture",
+    "output": "voxcat-architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [1160, 620],
+    "views": [
+      { "id": "split-pipeline", "label": "Split voice pipeline", "focus": ["browser", "webrtc", "stt", "llm", "tts"], "note": "Three Gemini models handle STT, reasoning, and TTS independently." },
+      { "id": "tool-system", "label": "Tool execution", "focus": ["llm", "builtin-tools", "mcp-servers", "tavily", "gemini-deep"], "note": "LLM calls built-in tools or MCP servers, results flow back via RTVI." },
+      { "id": "persistence", "label": "Persistence layer", "focus": ["builtin-tools", "output-files", "sessions", "notebooklm"], "note": "Files, sessions, and NotebookLM sync on local disk or remote API." }
+    ]
+  },
+  "components": [
+    { "id": "browser", "type": "frontend", "label": "React Client", "sublabel": "WebRTC + RTVI", "pos": [40, 260], "size": [130, 64] },
+    { "id": "webrtc", "type": "backend", "label": "SmallWebRTC", "sublabel": "Transport :7860", "pos": [260, 260], "size": [130, 64] },
+    { "id": "stt", "type": "cloud", "label": "Gemini 3.5", "sublabel": "Transcribe Live", "pos": [260, 110], "size": [130, 56], "tag": "STT" },
+    { "id": "llm", "type": "backend", "label": "Gemini 3.7 Flash", "sublabel": "LLM + Tools", "pos": [500, 260], "size": [140, 64], "tag": "reasoning" },
+    { "id": "tts", "type": "cloud", "label": "Gemini 3.1 Flash", "sublabel": "TTS Preview", "pos": [260, 400], "size": [130, 52], "tag": "TTS" },
+    { "id": "builtin-tools", "type": "backend", "label": "Built-in Tools", "sublabel": "10 handlers", "pos": [740, 150], "size": [130, 52] },
+    { "id": "mcp-servers", "type": "external", "label": "MCP Servers", "sublabel": "stdio transport", "pos": [740, 400], "size": [130, 52] },
+    { "id": "tavily", "type": "external", "label": "Tavily API", "sublabel": "search + extract", "pos": [990, 60], "size": [120, 52] },
+    { "id": "gemini-deep", "type": "cloud", "label": "Gemini 3.7 Flash", "sublabel": "deep analysis", "pos": [990, 180], "size": [120, 52], "tag": "thinking" },
+    { "id": "output-files", "type": "database", "label": "Output Files", "sublabel": "output/<persona>/", "pos": [990, 320], "size": [120, 52] },
+    { "id": "notebooklm", "type": "external", "label": "NotebookLM", "sublabel": "Google API", "pos": [990, 420], "size": [120, 52] },
+    { "id": "sessions", "type": "database", "label": "Sessions", "sublabel": "sessions/<persona>/", "pos": [60, 470], "size": [120, 52] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Pipecat Pipeline", "wraps": ["webrtc", "stt", "llm", "tts"] }
+  ],
+  "connections": [
+    { "id": "browser-to-webrtc", "from": "browser", "to": "webrtc", "label": "WebRTC + RTVI", "variant": "emphasis", "labelDy": -24 },
+    { "id": "webrtc-to-stt", "from": "webrtc", "to": "stt", "label": "audio in", "fromSide": "top", "toSide": "bottom" },
+    { "id": "stt-to-llm", "from": "stt", "to": "llm", "label": "transcript", "fromSide": "right", "toSide": "top" },
+    { "id": "llm-to-tts", "from": "llm", "to": "tts", "label": "text frames", "fromSide": "bottom", "toSide": "right" },
+    { "id": "tts-to-webrtc", "from": "tts", "to": "webrtc", "label": "audio out", "fromSide": "left", "toSide": "bottom", "labelAt": [195, 400] },
+    { "id": "llm-to-builtin", "from": "llm", "to": "builtin-tools", "label": "function calls", "fromSide": "top", "toSide": "left", "labelAt": [660, 175] },
+    { "id": "llm-to-mcp", "from": "llm", "to": "mcp-servers", "label": "MCP tools", "variant": "dashed", "fromSide": "bottom", "toSide": "left", "labelAt": [660, 375] },
+    { "id": "builtin-to-tavily", "from": "builtin-tools", "to": "tavily", "label": "search", "fromSide": "right", "toSide": "left", "labelAt": [930, 100] },
+    { "id": "builtin-to-gemini", "from": "builtin-tools", "to": "gemini-deep", "label": "thinking", "variant": "dashed", "fromSide": "bottom", "toSide": "left", "labelAt": [930, 216] },
+    { "id": "builtin-to-output", "from": "builtin-tools", "to": "output-files", "label": "file_write", "fromSide": "bottom", "toSide": "left", "labelAt": [930, 340] },
+    { "id": "builtin-to-nlm", "from": "builtin-tools", "to": "notebooklm", "label": "sync", "variant": "dashed", "fromSide": "bottom", "toSide": "left", "labelAt": [930, 435] },
+    { "id": "webrtc-to-sessions", "from": "webrtc", "to": "sessions", "label": "on disconnect", "variant": "dashed", "fromSide": "left", "toSide": "top", "labelAt": [155, 375] }
+  ],
+  "cards": [
+    { "dot": "violet", "title": "Voice Pipeline", "items": ["Split mode: STT, LLM, TTS as separate Gemini models", "Live mode swaps in single Gemini Live model"] },
+    { "dot": "emerald", "title": "Tool System", "items": ["10 built-in tools registered per persona config", "MCP servers filtered by read_only_tools allowlist", "deep_analysis escalates to Gemini 3.7 with thinking"] },
+    { "dot": "cyan", "title": "Persistence", "items": ["Per-persona output directories on local disk", "Session transcripts saved on WebRTC disconnect", "NotebookLM sync via Google API"] }
+  ]
+}

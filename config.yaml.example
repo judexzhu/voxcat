@@ -6,35 +6,22 @@ voice:
   live_model: "gemini-3.1-flash-live-preview"
   split:
     stt_model: "gemini-3.5-transcribe-live"
-    llm_model: "gemini-3.6-flash"
+    llm_model: "gemini-3.7-flash"
     tts_model: "gemini-3.1-flash-tts-preview"
     tts_voice: "Kore"
     tts_pace: "fast" # Options: slow, fast, or remove for default pace
 
-mcp_servers:
-  redhat:
-    command: "uv"
-    args: ["run", "python", "-m", "redhat_api_mcp.server"]
-    cwd: "/Users/judzhu/Documents/github.com/redhat-api-mcp"
-    env_keys: [RH_API_OFFLINE_TOKEN]
-    read_only_tools:
-      - search_cases
-      - get_case
-      - search_kcs
-      - get_kcs
-      - search_docs
-      - get_doc
-      - search_cve
-      - get_cve
-  jira:
-    command: "uv"
-    args: ["run", "python", "jira_mcp_server.py"]
-    cwd: "/Users/judzhu/Documents/github.com/mcp-jira"
-    env_keys: [JIRA_SERVER_URL, JIRA_API_TOKEN, JIRA_USER_EMAIL]
-    read_only_tools:
-      - jira_search_issues
-      - jira_get_issue
-      - jira_get_create_meta
+# MCP servers — add your own here. Each server needs: command, args, cwd, env_keys, read_only_tools.
+# Example:
+#   my-server:
+#     command: "uv"
+#     args: ["run", "python", "-m", "my_mcp_server"]
+#     cwd: "/path/to/my-mcp-server"
+#     env_keys: [MY_API_TOKEN]
+#     read_only_tools:
+#       - search_items
+#       - get_item
+mcp_servers: {}
 
 persona:
   default: "thinking-partner"
@@ -146,7 +133,7 @@ persona:
             research,
             notebooklm_sync,
           ]
-        mcp_servers: [redhat, jira]
+        mcp_servers: []  # add your MCP server names here
       output:
         directory: "output/sre"
 

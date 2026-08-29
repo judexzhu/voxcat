@@ -6,6 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Jude Zhu", email = "judzhu@redhat.com" }
 ]
+license = "AGPL-3.0-only"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.141.1",
@@ -17,8 +18,15 @@ dependencies = [
     "uvicorn>=0.52.4",
 ]
 
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-asyncio>=1.0"]
+
 [project.scripts]
 voxcat = "voxcat:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["uv_build>=0.12.6,<0.13.0"]

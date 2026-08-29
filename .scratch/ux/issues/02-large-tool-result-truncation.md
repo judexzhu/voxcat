@@ -1,53 +1,61 @@
-# Large MCP tool results cause bot to stop mid-sentence
+# Large tool result handling — spill-to-file pattern
+
+## Status: IMPLEMENTED (2026-08-29)
 
 ## Problem
 
-When MCP tools (especially `jira_search_issues`) return large JSON payloads, Gemini Live hits its output token limit and stops speaking mid-sentence. The user sees a partial response like "The search concluded because the tool returned" and then silence.
+MCP tools (Jira, Red Hat API) can return 50-100K+ chars of JSON. Pipecat feeds the full result into LLM context, causing: context overflow, degraded reasoning quality, repeated tool calls, and mid-sentence cutoffs.
 
-## Root cause
+## Solution: ResultSpillProcessor
 
-Pipecat feeds the full MCP tool result back into the LLM context. A Jira search returning 20+ issues is thousands of tokens. Gemini Live's output budget is consumed by processing the large context, leaving nothing for the spoken response.
+`FrameProcessor` in `bot.py` that intercepts `FunctionCallResultFrame` downstream before the context aggregator stores it.
 
-## Plan
+**Flow:**
+1. Serialize `frame.result` to JSON
+2. If `len(serialized) > threshold` (default 5000 chars):
+   - Write full result to `output/<persona>/tool-results/<tool>-<timestamp>.json`
+   - Replace `frame.result` with: 2000-char preview + file path + instruction to use `file_read`
+3. If under threshold: pass through unchanged
+4. Push frame downstream to aggregator (stores truncated version in LLM context)
 
-### Option A: Truncate at the pipeline level (recommended)
-
-Add a result-truncation wrapper around MCP tool results in `bot.py` before they enter the LLM context.
-
-1. After `connect_mcp_servers()` returns tools, wrap each tool's handler to truncate results
-2. Truncation rules:
-   - Arrays (issues, results): keep first 5 items, append `"... and N more"`
-   - String content: cap at 3000 chars
-   - Nested objects: flatten to key fields only
-3. The FULL result still goes to the RTVI data channel (client sees everything), only the LLM gets the truncated version
-
-Implementation sketch in `bot.py`:
-```python
-def truncate_for_llm(result, max_items=5, max_chars=3000):
-    if isinstance(result, dict):
-        for key in ("issues", "results", "items"):
-            if key in result and isinstance(result[key], list):
-                items = result[key]
-                if len(items) > max_items:
-                    result[key] = items[:max_items]
-                    result[f"_{key}_truncated"] = f"{len(items) - max_items} more not shown"
-    if isinstance(result, str) and len(result) > max_chars:
-        result = result[:max_chars] + "... (truncated)"
-    return result
+**LLM sees:**
+```json
+{
+  "preview": "<first 2000 chars of original JSON>",
+  "truncated": true,
+  "full_size_chars": 87432,
+  "full_result_file": "tool-results/search_cases-20260829-143022.json",
+  "note": "Result too large. Preview shown. Use file_read to see the full data."
+}
 ```
 
-### Option B: Per-tool max_results parameter
+**Agent can** call `file_read` on the spilled file if it needs more data. Most questions are answerable from the preview alone.
 
-Configure `max_results` per MCP tool in `config.yaml` and pass it as a default argument. Only works for tools that support pagination/limits.
+## Pipeline placement
 
-### Option C: Summarize via Gemini Flash
+All three pipelines: `... llm, result_spill, [pace_proc], [tts], transport.output(), assistant_aggregator`
 
-For results > N tokens, call Gemini 3.7 Flash to summarize before feeding back. Adds latency but preserves all information.
+Placed after LLM (which emits the result frame downstream) and before assistant_aggregator (which stores it in context).
 
-## Recommendation
+## Tests
 
-Start with Option A — simple, no latency, covers 90% of cases. Add Option C later for research-heavy tools where truncation loses too much.
+4 tests in `tests/test_result_spill.py`:
+- Small result passes through unchanged
+- Large result spills to file + creates truncated frame
+- Non-function frames pass through
+- Result at exact threshold not spilled
 
-## Priority
+## Open: threshold tuning
 
-Medium — affects SRE persona most (Jira/case searches). Other personas rarely hit this.
+Current threshold (5000 chars / ~1250 tokens) is a workaround. Needs real usage data to find the optimal value. Factors:
+
+- **Per-result quality**: LLM reasons worse over large JSON blobs
+- **Accumulation**: results stack across session turns. 30 calls x 5K = 150K chars in context
+- **Model-dependent**: different Gemini models may handle large contexts differently
+- **Task-dependent**: SRE searches benefit from more preview, brainstorming needs less
+
+Investigation needed: log actual tool result sizes in production, measure answer quality at different thresholds, check if Gemini 3.7 Flash degrades at specific context sizes. Consider making threshold configurable per-tool in `config.yaml`.
+
+## Spilled file cleanup
+
+Currently: spilled files persist in `output/<persona>/tool-results/`. They are useful artifacts (full search results, case data). No auto-cleanup implemented. Could add session-end cleanup or TTL-based cleanup later if disk usage becomes an issue.

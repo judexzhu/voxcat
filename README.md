@@ -4,6 +4,8 @@ A voice AI agent with swappable personas. Talk to it, it calls tools, writes fil
 
 Built on [Pipecat](https://github.com/pipecat-ai/pipecat) + Gemini Live + SmallWebRTC.
 
+![Architecture](docs/voxcat-architecture.visual-check.2048x1320.dark.png)
+
 ![Landing](docs/preview-landing.png)
 
 ![Session](docs/preview-session.png)
@@ -127,4 +129,4 @@ client/src/
 
 ## License
 
-Private. Not yet open source.
+[AGPL-3.0](LICENSE) — free to use, modify, and distribute. If you run a modified version as a network service, you must open-source your changes.

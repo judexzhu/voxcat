@@ -23,7 +23,10 @@ from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 from pipecat.workers.runner import WorkerRunner
 
-from pipecat.frames.frames import TextFrame
+import json
+from datetime import datetime
+
+from pipecat.frames.frames import FunctionCallResultFrame, TextFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 from filestore import safe_resolve
@@ -32,6 +35,35 @@ from tools import build_tools
 from transcript import TranscriptRecorder
 
 load_dotenv(override=True)
+
+
+class ResultSpillProcessor(FrameProcessor):
+    # ponytail: 5000 char threshold is a workaround — needs real usage data to find optimal value
+    def __init__(self, output_dir: str, threshold: int = 5000, preview_size: int = 2000):
+        super().__init__()
+        self._output_dir = Path(output_dir) / "tool-results"
+        self._threshold = threshold
+        self._preview_size = preview_size
+
+    async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
+        if isinstance(frame, FunctionCallResultFrame) and direction == FrameDirection.DOWNSTREAM:
+            serialized = json.dumps(frame.result, default=str, ensure_ascii=False)
+            if len(serialized) > self._threshold:
+                self._output_dir.mkdir(parents=True, exist_ok=True)
+                ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+                filename = f"{frame.function_name}-{ts}.json"
+                filepath = self._output_dir / filename
+                filepath.write_text(serialized)
+                frame.result = {
+                    "preview": serialized[:self._preview_size],
+                    "truncated": True,
+                    "full_size_chars": len(serialized),
+                    "full_result_file": f"tool-results/{filename}",
+                    "note": "Result too large. Preview shown. Use file_read to see the full data.",
+                }
+                logger.info(f"Tool result spilled to {filepath} ({len(serialized)} chars)")
+        await self.push_frame(frame, direction)
 
 
 class TTSPaceProcessor(FrameProcessor):
@@ -90,6 +122,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     is_silent = persona.get("silent", False)
     logger.info(f"Persona: {persona_name} | Mode: {voice_mode} | Silent: {is_silent} | Tools: {len(tools)} | Output: {output_dir}")
 
+    result_spill = ResultSpillProcessor(output_dir)
+
     context = LLMContext(tools=tools)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
 
@@ -118,6 +152,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 stt,
                 user_aggregator,
                 llm,
+                result_spill,
                 transport.output(),
                 assistant_aggregator,
             ])
@@ -136,6 +171,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 stt,
                 user_aggregator,
                 llm,
+                result_spill,
                 *([pace_proc] if pace_proc else []),
                 tts,
                 transport.output(),
@@ -155,6 +191,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             transport.input(),
             user_aggregator,
             llm,
+            result_spill,
             transport.output(),
             assistant_aggregator,
         ])
