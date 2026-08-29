@@ -49,6 +49,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     common = config["persona"].get("common_instruction", "")
     system_instruction = persona["instruction"] + "\n" + common if common else persona["instruction"]
     voice = config["voice"]["name"]
+    live_model = config["voice"].get("model")
     output_dir = persona.get("output", {}).get("directory", "brainstorms")
     builtin_tools = persona.get("tools", {}).get("builtin", [])
     mcp_server_names = persona.get("tools", {}).get("mcp_servers", [])
@@ -66,6 +67,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     llm = GeminiLiveLLMService(
         api_key=os.environ["GOOGLE_API_KEY"],
+        model=live_model,
         settings=GeminiLiveLLMService.Settings(
             system_instruction=system_instruction,
             voice=voice,
