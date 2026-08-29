@@ -268,10 +268,12 @@ function SessionPage({
   persona,
   outputDir,
   context,
+  sessionFile,
 }: {
   persona: string;
   outputDir: string;
   context?: string;
+  sessionFile?: string;
 }) {
   return (
     <PipecatAppBase
@@ -281,7 +283,11 @@ function SessionPage({
         requestData: {
           transport: "webrtc",
           enableDefaultIceServers: true,
-          body: { persona, ...(context ? { context } : {}) },
+          body: {
+            persona,
+            ...(context ? { context } : {}),
+            ...(sessionFile ? { session_file: sessionFile } : {}),
+          },
         },
       }}
       connectOnMount
@@ -301,7 +307,7 @@ function PastSessions({
   onContinue,
   onBack,
 }: {
-  onContinue: (persona: string, context: string) => void;
+  onContinue: (persona: string, context: string, sessionFile: string) => void;
   onBack: () => void;
 }) {
   const [sessions, setSessions] = useState<
@@ -375,11 +381,28 @@ function PastSessions({
           {selected ? (
             <div className="pane" style={{ height: "100%" }}>
               <div className="pane-header pane-header-document">
-                <span className="doc-header-name">{selected.filename}</span>
+                <span
+                  className="doc-header-name pane-meta-interactive"
+                  title="Click to rename"
+                  onClick={() => {
+                    const name = prompt("Rename session:", selected.filename.replace(".md", ""));
+                    if (!name) return;
+                    fetch(`/api/sessions/${selected.persona}/${selected.filename}/rename?new_name=${encodeURIComponent(name)}`, { method: "POST" })
+                      .then((r) => r.json())
+                      .then((d) => {
+                        if (d.filename) {
+                          setSelected({ persona: selected.persona, filename: d.filename });
+                          fetch("/api/sessions").then((r) => r.json()).then((d) => setSessions(d.sessions || []));
+                        }
+                      });
+                  }}
+                >
+                  {selected.filename}
+                </span>
                 <button
                   className="btn-primary"
                   style={{ padding: "8px 16px", fontSize: "10px" }}
-                  onClick={() => onContinue(selected.persona, content)}
+                  onClick={() => onContinue(selected.persona, content, selected.filename)}
                 >
                   CONTINUE SESSION
                 </button>
@@ -402,7 +425,7 @@ function LandingPage({
   onContinue,
 }: {
   onStart: (persona: string) => void;
-  onContinue: (persona: string, context: string) => void;
+  onContinue: (persona: string, context: string, sessionFile: string) => void;
 }) {
   const [persona, setPersona] = useState("thinking-partner");
   const [view, setView] = useState<"select" | "history">("select");
@@ -483,6 +506,7 @@ export default function App() {
     persona: string;
     outputDir: string;
     context?: string;
+    sessionFile?: string;
   } | null>(null);
 
   if (session) {
@@ -491,6 +515,7 @@ export default function App() {
         persona={session.persona}
         outputDir={session.outputDir}
         context={session.context}
+        sessionFile={session.sessionFile}
       />
     );
   }
@@ -500,8 +525,8 @@ export default function App() {
       onStart={(p) =>
         setSession({ persona: p, outputDir: `output/${p}/` })
       }
-      onContinue={(p, ctx) =>
-        setSession({ persona: p, outputDir: `output/${p}/`, context: ctx })
+      onContinue={(p, ctx, file) =>
+        setSession({ persona: p, outputDir: `output/${p}/`, context: ctx, sessionFile: file })
       }
     />
   );

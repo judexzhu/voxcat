@@ -123,7 +123,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.info("Client disconnected")
         filepath = recorder.save_transcript()
         logger.info(f"Transcript saved to {filepath}")
-        session_path = recorder.save_session()
+        session_file = body.get("session_file")
+        session_path = recorder.save_session(append_to=session_file)
         logger.info(f"Session saved to {session_path}")
         for mc in mcp_clients:
             await mc.close()
@@ -244,6 +245,19 @@ if __name__ == "__main__":
         if not path or not path.exists():
             return {"error": "Session not found"}
         return {"content": path.read_text()[:20000], "persona": persona, "filename": filename}
+
+    @app.post("/api/sessions/{persona}/{filename}/rename")
+    async def rename_session(persona: str, filename: str, new_name: str):
+        path = safe_resolve(SESSIONS_DIR / persona, filename)
+        if not path or not path.exists():
+            return {"error": "Session not found"}
+        if not new_name.endswith(".md"):
+            new_name += ".md"
+        new_path = safe_resolve(SESSIONS_DIR / persona, new_name)
+        if not new_path:
+            return {"error": "Invalid name"}
+        path.rename(new_path)
+        return {"filename": new_name}
 
     notebook_id = os.environ.get("NOTEBOOKLM_NOTEBOOK_ID", "")
 

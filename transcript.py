@@ -64,31 +64,40 @@ class TranscriptRecorder:
         filepath.write_text("\n".join(lines))
         return filepath
 
-    def save_session(self) -> Path:
+    def save_session(self, append_to: str | None = None) -> Path:
         session_dir = SESSIONS_DIR / self._persona if self._persona else SESSIONS_DIR
         session_dir.mkdir(parents=True, exist_ok=True)
-        ts = self._session_start.strftime("%Y-%m-%d_%H%M%S")
-        filename = f"{ts}.md"
-        filepath = session_dir / filename
+
+        if append_to:
+            filepath = session_dir / append_to
+        else:
+            ts = self._session_start.strftime("%Y-%m-%d_%H%M%S")
+            filepath = session_dir / f"{ts}.md"
 
         duration = datetime.now() - self._session_start
         minutes = int(duration.total_seconds() // 60)
 
-        lines = [
-            f"# Session: {self._persona or 'unknown'}",
-            f"**Date:** {self._session_start.strftime('%Y-%m-%d %H:%M')}  |  **Duration:** {minutes}m",
-            "",
-        ]
-
+        turn_lines = []
         for turn in self._turns:
             ts_str = turn["timestamp"]
             if hasattr(ts_str, "strftime"):
                 ts_str = ts_str.strftime("%H:%M:%S")
             role = turn["role"].capitalize()
-            lines.append(f"**[{ts_str}] {role}:** {turn['content']}")
-            lines.append("")
+            turn_lines.append(f"**[{ts_str}] {role}:** {turn['content']}")
+            turn_lines.append("")
 
-        filepath.write_text("\n".join(lines))
+        if append_to and filepath.exists():
+            existing = filepath.read_text()
+            separator = f"\n---\n\n**Continued:** {self._session_start.strftime('%Y-%m-%d %H:%M')}  |  **Duration:** {minutes}m\n\n"
+            filepath.write_text(existing + separator + "\n".join(turn_lines))
+        else:
+            header = [
+                f"# Session: {self._persona or 'unknown'}",
+                f"**Date:** {self._session_start.strftime('%Y-%m-%d %H:%M')}  |  **Duration:** {minutes}m",
+                "",
+            ]
+            filepath.write_text("\n".join(header + turn_lines))
+
         return filepath
 
     def get_transcript_text(self) -> str:
