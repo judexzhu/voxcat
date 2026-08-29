@@ -6,9 +6,10 @@ interface Props {
   selected: { persona: string; filename: string } | null;
   onSelect?: (persona: string, filename: string) => void;
   onDeleted?: () => void;
+  refreshKey?: number;
 }
 
-export function FilePreview({ selected, onSelect, onDeleted }: Props) {
+export function FilePreview({ selected, onSelect, onDeleted, refreshKey }: Props) {
   const [content, setContent] = useState("");
   const [raw, setRaw] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -29,7 +30,7 @@ export function FilePreview({ selected, onSelect, onDeleted }: Props) {
     fetch(url)
       .then((r) => r.json())
       .then((d) => setContent(d.content || d.error || ""));
-  }, [selected?.persona, selected?.filename]);
+  }, [selected?.persona, selected?.filename, refreshKey]);
 
   useEffect(() => {
     if (renaming && renameRef.current) renameRef.current.focus();

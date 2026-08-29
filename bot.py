@@ -87,7 +87,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         mcp_tools, mcp_clients = await connect_mcp_servers(mcp_server_names, mcp_config)
         tools.extend(mcp_tools)
 
-    logger.info(f"Persona: {persona_name} | Mode: {voice_mode} | Tools: {len(tools)} | Output: {output_dir}")
+    is_silent = persona.get("silent", False)
+    logger.info(f"Persona: {persona_name} | Mode: {voice_mode} | Silent: {is_silent} | Tools: {len(tools)} | Output: {output_dir}")
 
     context = LLMContext(tools=tools)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
@@ -111,25 +112,35 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 system_instruction=system_instruction,
             ),
         )
-        tts = GeminiTTSService(
-            api_key=api_key,
-            model=split_config.get("tts_model", "gemini-3.1-flash-tts-preview"),
-            voice_id=split_config.get("tts_voice", voice),
-        )
+        if is_silent:
+            pipeline = Pipeline([
+                transport.input(),
+                stt,
+                user_aggregator,
+                llm,
+                transport.output(),
+                assistant_aggregator,
+            ])
+        else:
+            tts = GeminiTTSService(
+                api_key=api_key,
+                model=split_config.get("tts_model", "gemini-3.1-flash-tts-preview"),
+                voice_id=split_config.get("tts_voice", voice),
+            )
 
-        tts_pace = split_config.get("tts_pace", "fast")
-        pace_proc = TTSPaceProcessor(tts_pace) if tts_pace else None
+            tts_pace = split_config.get("tts_pace", "fast")
+            pace_proc = TTSPaceProcessor(tts_pace) if tts_pace else None
 
-        pipeline = Pipeline([
-            transport.input(),
-            stt,
-            user_aggregator,
-            llm,
-            *([pace_proc] if pace_proc else []),
-            tts,
-            transport.output(),
-            assistant_aggregator,
-        ])
+            pipeline = Pipeline([
+                transport.input(),
+                stt,
+                user_aggregator,
+                llm,
+                *([pace_proc] if pace_proc else []),
+                tts,
+                transport.output(),
+                assistant_aggregator,
+            ])
     else:
         llm = GeminiLiveLLMService(
             api_key=os.environ["GOOGLE_API_KEY"],

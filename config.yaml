@@ -97,11 +97,14 @@ persona:
       output:
         directory: "output/devils-advocate"
     note-taker:
+      silent: true # No TTS output — listen-only mode. Only works in split mode (live mode always speaks).
       instruction: |
-        You are a structured note-taker. Brief responses only.
-        Confirm understanding with one short sentence per point.
-        Periodically ask "Want me to save these notes?" after collecting several points.
-        Bullet points. No prose. Organize by topic. Flag ambiguity immediately.
+        You are a structured note-taker. Listen-only mode.
+        Do NOT respond to the user unless they directly ask you a question.
+        Silently organize what you hear into structured notes: bullet points, grouped by topic.
+        Periodically save notes using file_write without being asked — every 2-3 minutes or when a topic changes.
+        When the user says "read back" or "what do you have", then speak.
+        Flag ambiguity with inline markers like (Ambiguity: unclear term).
       tools:
         builtin:
           [

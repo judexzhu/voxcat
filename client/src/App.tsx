@@ -165,6 +165,14 @@ function SessionView({
     currentVoiceState === "listening" || currentVoiceState === "speaking";
   const audioLevels = useAudioLevel(micActive);
 
+  // Auto-refresh output tree when file_write completes
+  const fileWriteCount = entries.filter(
+    (e) => e.kind === "tool-result" && e.functionName === "file_write" && !e.cancelled,
+  ).length;
+  useEffect(() => {
+    if (fileWriteCount > 0) setTreeKey((k) => k + 1);
+  }, [fileWriteCount]);
+
   return (
     <div className="session">
       {/* Rail */}
@@ -261,6 +269,7 @@ function SessionView({
           <Panel defaultSize={40} minSize={20} id="document">
             <FilePreview
               selected={selected}
+              refreshKey={treeKey}
               onSelect={(p, f) => {
                 if (p && f) setSelected({ persona: p, filename: f });
                 else setSelected(null);
