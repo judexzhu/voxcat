@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#101012; font-family:'IBM Plex Mono',ui-monospace,monospace; }
+  a { color:#a78bfa; text-decoration:none; border-bottom:1px solid rgba(167,139,250,0.4); }
+  a:hover { color:#c4b5fd; border-color:#c4b5fd; }
+  @keyframes vxWave { 0%,100% { transform:scaleY(0.16); } 50% { transform:scaleY(1); } }
+  @keyframes vxBreathe { 0%,100% { transform:scale(1); opacity:0.85; } 50% { transform:scale(1.06); opacity:1; } }
+  @keyframes vxHalo { 0%,100% { opacity:0.3; transform:scale(1); } 50% { opacity:0.62; transform:scale(1.14); } }
+  @keyframes vxSweep { 0% { transform:translateX(-100%); } 100% { transform:translateX(400%); } }
+  .vxs::-webkit-scrollbar { width:3px; }
+  .vxs::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.12); border-radius:2px; }
+  .vxl::-webkit-scrollbar { width:3px; }
+  .vxl::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.14); border-radius:2px; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:60px;padding:56px;background:#101012;box-sizing:border-box">
+
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:860px">
+    <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.35)">Direction 1A · instrument panel · full fidelity</div>
+    <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:300;color:#f5f4f2;line-height:1.1">Voxcat</div>
+    <div style="font-size:12px;line-height:1.8;color:rgba(255,255,255,0.45)">Every state of the session: connect, listening, speaking, muted, tool call, ended. Newsreader for anything a human said or wrote, IBM Plex Mono for anything the machine labels. Violet marks two things only — live voice, and output the agent produced.</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px">
+      <span style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3)">01</span>
+      <span style="font-family:'Newsreader',serif;font-size:22px;color:#f5f4f2">Session · listening</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.32)">1440 × 900</span>
+    </div>
+
+    <div data-screen-label="01 Session listening" style="box-sizing:border-box;width:1440px;height:900px;background:#0b0b0d;color:#eceaea;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,0.09)">
+
+      <div style="display:grid;grid-template-columns:300px 1fr 300px;align-items:stretch;height:92px;border-bottom:1px solid rgba(255,255,255,0.09);flex-shrink:0">
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:7px;padding:0 24px">
+          <div style="font-size:12px;letter-spacing:0.26em;color:#eceaea">VOXCAT</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.4)">THINKING PARTNER</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.2)">·</span>
+            <span style="font-size:10px;letter-spacing:0.06em;color:rgba(255,255,255,0.28)">brainstorms/</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:22px;border-left:1px solid rgba(255,255,255,0.09);border-right:1px solid rgba(255,255,255,0.09)">
+          <div style="position:relative;width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+            <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(167,139,250,0.45);animation:vxHalo 3s ease-in-out infinite"></div>
+            <div style="width:9px;height:9px;border-radius:50%;background:#8b5cf6;box-shadow:0 0 12px rgba(139,92,246,0.85);animation:vxBreathe 3s ease-in-out infinite"></div>
+          </div>
+          {{ waveDark }}
+          <div style="display:flex;flex-direction:column;gap:5px;min-width:104px">
+            <div style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">LISTENING</div>
+            <div style="font-size:10px;letter-spacing:0.08em;color:rgba(255,255,255,0.32)">08:41 ELAPSED</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 24px">
+          <div style="display:flex;align-items:center;gap:6px;margin-right:6px">
+            <span style="width:5px;height:5px;border-radius:50%;background:#4ade80"></span>
+            <span style="font-size:10px;letter-spacing:0.1em;color:rgba(255,255,255,0.35)">MIC ON</span>
+          </div>
+          <button style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;padding:8px 13px;background:none;border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.65);cursor:pointer" style-hover="border-color:rgba(255,255,255,0.34);color:#eceaea">MUTE</button>
+          <button style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;padding:8px 13px;background:none;border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.65);cursor:pointer" style-hover="border-color:rgba(239,68,68,0.5);color:#f87171">END</button>
+        </div>
+      </div>
+
+      <div style="flex:1;display:grid;grid-template-columns:1fr 244px 1fr;overflow:hidden">
+
+        <div style="display:flex;flex-direction:column;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 24px;border-bottom:1px solid rgba(255,255,255,0.09);flex-shrink:0">
+            <span style="font-size:10px;letter-spacing:0.18em;color:rgba(255,255,255,0.38)">TIMELINE</span>
+            <div style="display:flex;align-items:center;gap:14px">
+              <span style="font-size:10px;letter-spacing:0.1em;color:rgba(255,255,255,0.25)">14 EVENTS</span>
+              <span style="font-size:10px;letter-spacing:0.1em;color:rgba(255,255,255,0.25);cursor:pointer" style-hover="color:#eceaea">TOOLS ONLY</span>
+            </div>
+          </div>
+          <div class="vxs" style="flex:1;overflow-y:auto">
+
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.05)">
+              <div style="font-size:10px;color:rgba(255,255,255,0.26);padding-top:4px">14:02:11</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.48)">YOU</div>
+                <div style="font-family:'Newsreader',serif;font-size:17px;line-height:1.55;color:#eceaea">Let's think through the persona output directories. I want the SRE one writing into Obsidian.</div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.05)">
+              <div style="font-size:10px;color:rgba(255,255,255,0.26);padding-top:4px">14:02:19</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">VOXCAT</div>
+                <div style="font-family:'Newsreader',serif;font-size:17px;line-height:1.55;color:#eceaea">What happens if two personas point at the same folder? You'd lose the scoping guarantee that makes reading past sessions safe.</div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(255,255,255,0.015)">
+              <div style="font-size:10px;color:rgba(255,255,255,0.26);padding-top:4px">14:02:34</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span style="width:5px;height:5px;background:#8b5cf6;flex-shrink:0"></span>
+                  <span style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">WEBSEARCH</span>
+                  <span style="font-size:10px;color:rgba(255,255,255,0.28)">1.2s · 2 RESULTS</span>
+                  <span style="font-size:10px;color:rgba(255,255,255,0.22);margin-left:auto;cursor:pointer" style-hover="color:#eceaea">COLLAPSE</span>
+                </div>
+                <div style="border-left:1px solid rgba(139,92,246,0.35);padding-left:14px;display:flex;flex-direction:column;gap:9px">
+                  <div style="font-size:12px;line-height:1.65;color:rgba(255,255,255,0.58)"><span style="color:#eceaea">Obsidian vault conventions</span> — front-matter keys are parsed on read; unknown keys are preserved verbatim.</div>
+                  <div style="font-size:12px;line-height:1.65;color:rgba(255,255,255,0.58)"><span style="color:#eceaea">Scoped write roots</span> — per-agent output roots avoid collision without a lock file.</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.05)">
+              <div style="font-size:10px;color:rgba(255,255,255,0.26);padding-top:4px">14:02:52</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">VOXCAT</div>
+                <div style="font-family:'Newsreader',serif;font-size:17px;line-height:1.55;color:#eceaea">Scoped roots hold up. Want me to write the decision into the design doc?</div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.05)">
+              <div style="font-size:10px;color:rgba(255,255,255,0.26);padding-top:4px">14:03:04</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.48)">YOU</div>
+                <div style="font-family:'Newsreader',serif;font-size:17px;line-height:1.55;color:#eceaea">Yes, log it as decision 20.</div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(255,255,255,0.015)">
+              <div style="font-size:10px;color:rgba(255,255,255,0.26);padding-top:4px">14:03:07</div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:5px;height:5px;background:#8b5cf6;flex-shrink:0"></span>
+                <span style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">FILE_WRITE</span>
+                <span style="font-size:11px;color:rgba(255,255,255,0.5)">brainstorms/2026-08-28-persona-output.md</span>
+                <span style="font-size:10px;color:rgba(255,255,255,0.28)">2.1 KB</span>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.05)">
+              <div style="font-size:10px;color:rgba(255,255,255,0.2);padding-top:4px">14:03:09</div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:5px;height:5px;border:1px solid rgba(255,255,255,0.25);flex-shrink:0"></span>
+                <span style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3)">SUMMARIZE_SESSION</span>
+                <span style="font-size:10px;letter-spacing:0.1em;color:rgba(255,255,255,0.24)">CANCELLED</span>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px">
+              <div style="font-size:10px;color:rgba(255,255,255,0.26);padding-top:4px">14:03:21</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">VOXCAT</div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="font-family:'Newsreader',serif;font-style:italic;font-size:17px;line-height:1.55;color:rgba(236,234,234,0.55)">speaking</div>
+                  <div style="position:relative;width:60px;height:1px;background:rgba(255,255,255,0.12);overflow:hidden">
+                    <div style="position:absolute;top:0;left:0;width:25%;height:1px;background:#8b5cf6;animation:vxSweep 1.6s linear infinite"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;overflow:hidden;border-left:1px solid rgba(255,255,255,0.09);border-right:1px solid rgba(255,255,255,0.09)">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid rgba(255,255,255,0.09);flex-shrink:0">
+            <span style="font-size:10px;letter-spacing:0.18em;color:rgba(255,255,255,0.38)">OUTPUT</span>
+            <span style="font-size:11px;color:rgba(255,255,255,0.3);cursor:pointer" style-hover="color:#eceaea">↻</span>
+          </div>
+          <div class="vxs" style="flex:1;overflow-y:auto;padding:10px 0">
+            <div style="padding:9px 18px;font-size:10px;letter-spacing:0.14em;color:rgba(255,255,255,0.34);display:flex;justify-content:space-between"><span>THINKING-PARTNER</span><span style="color:rgba(255,255,255,0.24)">3</span></div>
+            <div style="padding:8px 18px 8px 22px;font-size:11px;color:#eceaea;border-left:2px solid #8b5cf6;background:rgba(139,92,246,0.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">2026-08-28-persona-output.md</div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(255,255,255,0.42);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#eceaea;background:rgba(255,255,255,0.03)">2026-08-27-transcript.md</div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(255,255,255,0.42);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#eceaea;background:rgba(255,255,255,0.03)">2026-08-24-mcp-filtering.md</div>
+            <div style="padding:18px 18px 9px;font-size:10px;letter-spacing:0.14em;color:rgba(255,255,255,0.34);display:flex;justify-content:space-between"><span>DEVILS-ADVOCATE</span><span style="color:rgba(255,255,255,0.24)">1</span></div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(255,255,255,0.42);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#eceaea;background:rgba(255,255,255,0.03)">2026-08-22-pricing-pushback.md</div>
+            <div style="padding:18px 18px 9px;font-size:10px;letter-spacing:0.14em;color:rgba(255,255,255,0.34);display:flex;justify-content:space-between"><span>NOTE-TAKER</span><span style="color:rgba(255,255,255,0.24)">0</span></div>
+            <div style="padding:6px 18px 6px 24px;font-family:'Newsreader',serif;font-style:italic;font-size:12px;color:rgba(255,255,255,0.24)">empty</div>
+            <div style="padding:18px 18px 9px;font-size:10px;letter-spacing:0.14em;color:rgba(255,255,255,0.34);display:flex;justify-content:space-between"><span>SRE</span><span style="color:rgba(255,255,255,0.24)">7</span></div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(255,255,255,0.42);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#eceaea;background:rgba(255,255,255,0.03)">03847221-oidc-thumbprint.md</div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(255,255,255,0.42);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#eceaea;background:rgba(255,255,255,0.03)">03846010-etcd-latency.md</div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(255,255,255,0.42);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#eceaea;background:rgba(255,255,255,0.03)">03845778-scp-denied.md</div>
+          </div>
+          <div style="padding:12px 18px;border-top:1px solid rgba(255,255,255,0.09);font-size:10px;letter-spacing:0.1em;color:rgba(255,255,255,0.26);flex-shrink:0">11 FILES · 4 ROOTS</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 28px;border-bottom:1px solid rgba(255,255,255,0.09);flex-shrink:0">
+            <span style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.55)">2026-08-28-PERSONA-OUTPUT.MD</span>
+            <div style="display:flex;align-items:center;gap:14px">
+              <span style="font-size:10px;color:rgba(255,255,255,0.25)">JUST NOW</span>
+              <span style="font-size:10px;letter-spacing:0.1em;color:rgba(255,255,255,0.25);cursor:pointer" style-hover="color:#eceaea">RAW</span>
+            </div>
+          </div>
+          <div class="vxs" style="flex:1;overflow-y:auto;padding:30px 28px">
+            <div style="font-family:'Newsreader',serif;font-size:28px;font-weight:300;line-height:1.2;color:#f5f4f2">Persona output directories</div>
+            <div style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.3);margin-top:9px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.09)">SESSION NOTES · 28 AUG 2026 · THINKING PARTNER</div>
+
+            <div style="font-size:10px;letter-spacing:0.18em;color:#c4b5fd;margin:24px 0 9px">QUESTION</div>
+            <div style="font-family:'Newsreader',serif;font-size:16px;line-height:1.7;color:rgba(236,234,234,0.85)">Should the SRE persona write directly into the Obsidian vault, or into a staging directory that syncs?</div>
+
+            <div style="font-size:10px;letter-spacing:0.18em;color:#c4b5fd;margin:24px 0 9px">OPTIONS CONSIDERED</div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div style="display:grid;grid-template-columns:18px 1fr;gap:8px;font-size:12px;line-height:1.65;color:rgba(255,255,255,0.6)"><span style="color:rgba(255,255,255,0.3)">01</span><span>Direct write to <span style="color:#eceaea">/data/obsidian/SFDC</span></span></div>
+              <div style="display:grid;grid-template-columns:18px 1fr;gap:8px;font-size:12px;line-height:1.65;color:rgba(255,255,255,0.6)"><span style="color:rgba(255,255,255,0.3)">02</span><span>Staging dir plus a sync step on disconnect</span></div>
+              <div style="display:grid;grid-template-columns:18px 1fr;gap:8px;font-size:12px;line-height:1.65;color:rgba(255,255,255,0.6)"><span style="color:rgba(255,255,255,0.3)">03</span><span>Shared root for all personas</span></div>
+            </div>
+
+            <div style="border-left:1px solid rgba(139,92,246,0.5);padding-left:16px;margin:24px 0;font-family:'Newsreader',serif;font-style:italic;font-size:16px;line-height:1.6;color:rgba(255,255,255,0.55)">Scoped roots hold the read-past-sessions guarantee without a lock file.</div>
+
+            <div style="font-size:10px;letter-spacing:0.18em;color:#c4b5fd;margin:24px 0 9px">DECISION</div>
+            <div style="font-family:'Newsreader',serif;font-size:16px;line-height:1.7;color:rgba(236,234,234,0.85)">Per-persona output roots, configured in <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c4b5fd">config.yaml</span>. Logged as decision 20.</div>
+            <div style="margin-top:14px;padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);font-size:11px;line-height:1.85;color:rgba(255,255,255,0.55)">output:<br>&nbsp;&nbsp;directory: "/data/obsidian/SFDC"</div>
+
+            <div style="font-size:10px;letter-spacing:0.18em;color:#c4b5fd;margin:24px 0 9px">FOLLOW-UPS</div>
+            <div style="border:1px solid rgba(255,255,255,0.09)">
+              <div style="display:grid;grid-template-columns:1fr 92px;font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.35);border-bottom:1px solid rgba(255,255,255,0.09)"><span style="padding:9px 14px">ITEM</span><span style="padding:9px 14px;border-left:1px solid rgba(255,255,255,0.09)">OWNER</span></div>
+              <div style="display:grid;grid-template-columns:1fr 92px;font-size:12px;color:rgba(255,255,255,0.6);border-bottom:1px solid rgba(255,255,255,0.06)"><span style="padding:10px 14px">Expand config schema</span><span style="padding:10px 14px;border-left:1px solid rgba(255,255,255,0.09)">me</span></div>
+              <div style="display:grid;grid-template-columns:1fr 92px;font-size:12px;color:rgba(255,255,255,0.6)"><span style="padding:10px 14px">Read-only MCP filter test</span><span style="padding:10px 14px;border-left:1px solid rgba(255,255,255,0.09)">me</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px">
+      <span style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3)">02</span>
+      <span style="font-family:'Newsreader',serif;font-size:22px;color:#f5f4f2">Session · light</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.32)">same grid, paper tone</span>
+    </div>
+
+    <div data-screen-label="02 Session light" style="box-sizing:border-box;width:1440px;height:640px;background:#fbfaf8;color:#17171a;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,0.1)">
+      <div style="display:grid;grid-template-columns:300px 1fr 300px;align-items:stretch;height:92px;border-bottom:1px solid rgba(0,0,0,0.1);flex-shrink:0">
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:7px;padding:0 24px">
+          <div style="font-size:12px;letter-spacing:0.26em;color:#17171a">VOXCAT</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;letter-spacing:0.12em;color:rgba(23,23,26,0.5)">SRE ASSISTANT</span>
+            <span style="font-size:10px;color:rgba(23,23,26,0.22)">·</span>
+            <span style="font-size:10px;letter-spacing:0.06em;color:rgba(23,23,26,0.35)">/data/obsidian/SFDC</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:22px;border-left:1px solid rgba(0,0,0,0.1);border-right:1px solid rgba(0,0,0,0.1)">
+          <div style="position:relative;width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+            <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(109,77,224,0.4);animation:vxHalo 3s ease-in-out infinite"></div>
+            <div style="width:9px;height:9px;border-radius:50%;background:#6d4de0;animation:vxBreathe 3s ease-in-out infinite"></div>
+          </div>
+          {{ waveLight }}
+          <div style="display:flex;flex-direction:column;gap:5px;min-width:104px">
+            <div style="font-size:10px;letter-spacing:0.16em;color:#5b3fc4">LISTENING</div>
+            <div style="font-size:10px;letter-spacing:0.08em;color:rgba(23,23,26,0.4)">02:12 ELAPSED</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 24px">
+          <div style="display:flex;align-items:center;gap:6px;margin-right:6px">
+            <span style="width:5px;height:5px;border-radius:50%;background:#16a34a"></span>
+            <span style="font-size:10px;letter-spacing:0.1em;color:rgba(23,23,26,0.45)">MIC ON</span>
+          </div>
+          <button style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;padding:8px 13px;background:none;border:1px solid rgba(23,23,26,0.18);color:rgba(23,23,26,0.7);cursor:pointer" style-hover="border-color:rgba(23,23,26,0.42)">MUTE</button>
+          <button style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;padding:8px 13px;background:none;border:1px solid rgba(23,23,26,0.18);color:rgba(23,23,26,0.7);cursor:pointer" style-hover="border-color:rgba(220,38,38,0.5);color:#dc2626">END</button>
+        </div>
+      </div>
+
+      <div style="flex:1;display:grid;grid-template-columns:1fr 244px 1fr;overflow:hidden">
+        <div style="display:flex;flex-direction:column;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 24px;border-bottom:1px solid rgba(0,0,0,0.1);flex-shrink:0">
+            <span style="font-size:10px;letter-spacing:0.18em;color:rgba(23,23,26,0.45)">TIMELINE</span>
+            <span style="font-size:10px;letter-spacing:0.1em;color:rgba(23,23,26,0.3)">6 EVENTS</span>
+          </div>
+          <div class="vxl" style="flex:1;overflow-y:auto">
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(0,0,0,0.06)">
+              <div style="font-size:10px;color:rgba(23,23,26,0.32);padding-top:4px">09:14:02</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:10px;letter-spacing:0.16em;color:rgba(23,23,26,0.5)">YOU</div>
+                <div style="font-family:'Newsreader',serif;font-size:17px;line-height:1.55;color:#17171a">Pull up case 03847221 and tell me whether the OIDC thumbprint was ever rotated.</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(0,0,0,0.06);background:rgba(109,77,224,0.035)">
+              <div style="font-size:10px;color:rgba(23,23,26,0.32);padding-top:4px">09:14:06</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span style="width:5px;height:5px;background:#6d4de0;flex-shrink:0"></span>
+                  <span style="font-size:10px;letter-spacing:0.16em;color:#5b3fc4">MCP · REDHAT</span>
+                  <span style="font-size:10px;color:rgba(23,23,26,0.35)">get_case · 0.8s</span>
+                </div>
+                <div style="border-left:1px solid rgba(109,77,224,0.35);padding-left:14px;display:flex;flex-direction:column;gap:7px">
+                  <div style="font-size:12px;line-height:1.65;color:rgba(23,23,26,0.65)"><span style="color:#17171a">03847221</span> — AssumeRoleWithWebIdentity failing after cluster upgrade</div>
+                  <div style="font-size:12px;line-height:1.65;color:rgba(23,23,26,0.65)">Severity 2 · opened 26 Aug · 4 comments</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(0,0,0,0.06)">
+              <div style="font-size:10px;color:rgba(23,23,26,0.32);padding-top:4px">09:14:18</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:10px;letter-spacing:0.16em;color:#5b3fc4">VOXCAT</div>
+                <div style="font-family:'Newsreader',serif;font-size:17px;line-height:1.55;color:#17171a">The thumbprint was rotated on the 24th, two days before the failures started. That's your first suspect.</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:68px 1fr;gap:16px;padding:14px 24px">
+              <div style="font-size:10px;color:rgba(23,23,26,0.32);padding-top:4px">09:14:31</div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:5px;height:5px;background:#6d4de0;flex-shrink:0"></span>
+                <span style="font-size:10px;letter-spacing:0.16em;color:#5b3fc4">FILE_WRITE</span>
+                <span style="font-size:11px;color:rgba(23,23,26,0.55)">03847221-oidc-thumbprint.md</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;overflow:hidden;border-left:1px solid rgba(0,0,0,0.1);border-right:1px solid rgba(0,0,0,0.1)">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid rgba(0,0,0,0.1);flex-shrink:0">
+            <span style="font-size:10px;letter-spacing:0.18em;color:rgba(23,23,26,0.45)">OUTPUT</span>
+            <span style="font-size:11px;color:rgba(23,23,26,0.35);cursor:pointer">↻</span>
+          </div>
+          <div class="vxl" style="flex:1;overflow-y:auto;padding:10px 0">
+            <div style="padding:9px 18px;font-size:10px;letter-spacing:0.14em;color:rgba(23,23,26,0.45);display:flex;justify-content:space-between"><span>SRE</span><span style="color:rgba(23,23,26,0.3)">7</span></div>
+            <div style="padding:8px 18px 8px 22px;font-size:11px;color:#17171a;border-left:2px solid #6d4de0;background:rgba(109,77,224,0.07);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">03847221-oidc-thumbprint.md</div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(23,23,26,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#17171a;background:rgba(0,0,0,0.03)">03846010-etcd-latency.md</div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(23,23,26,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#17171a;background:rgba(0,0,0,0.03)">03845778-scp-denied.md</div>
+            <div style="padding:18px 18px 9px;font-size:10px;letter-spacing:0.14em;color:rgba(23,23,26,0.45);display:flex;justify-content:space-between"><span>THINKING-PARTNER</span><span style="color:rgba(23,23,26,0.3)">3</span></div>
+            <div style="padding:8px 18px 8px 24px;font-size:11px;color:rgba(23,23,26,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" style-hover="color:#17171a;background:rgba(0,0,0,0.03)">2026-08-28-persona-output.md</div>
+          </div>
+          <div style="padding:12px 18px;border-top:1px solid rgba(0,0,0,0.1);font-size:10px;letter-spacing:0.1em;color:rgba(23,23,26,0.32);flex-shrink:0">11 FILES · 4 ROOTS</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 28px;border-bottom:1px solid rgba(0,0,0,0.1);flex-shrink:0">
+            <span style="font-size:10px;letter-spacing:0.12em;color:rgba(23,23,26,0.6)">03847221-OIDC-THUMBPRINT.MD</span>
+            <span style="font-size:10px;color:rgba(23,23,26,0.3)">JUST NOW</span>
+          </div>
+          <div class="vxl" style="flex:1;overflow-y:auto;padding:30px 28px">
+            <div style="font-family:'Newsreader',serif;font-size:28px;font-weight:300;line-height:1.2;color:#17171a">OIDC thumbprint rotation</div>
+            <div style="font-size:10px;letter-spacing:0.12em;color:rgba(23,23,26,0.4);margin-top:9px;padding-bottom:18px;border-bottom:1px solid rgba(0,0,0,0.1)">CASE 03847221 · SEV 2 · 28 AUG 2026</div>
+            <div style="font-size:10px;letter-spacing:0.18em;color:#5b3fc4;margin:24px 0 9px">FINDING</div>
+            <div style="font-family:'Newsreader',serif;font-size:16px;line-height:1.7;color:rgba(23,23,26,0.85)">The cluster's OIDC provider thumbprint was rotated on 24 Aug. Operator role assumption began failing on 26 Aug with InvalidIdentityToken.</div>
+            <div style="border-left:1px solid rgba(109,77,224,0.5);padding-left:16px;margin:24px 0;font-family:'Newsreader',serif;font-style:italic;font-size:16px;line-height:1.6;color:rgba(23,23,26,0.6)">Two-day gap matches the token cache TTL on the affected nodepool.</div>
+            <div style="font-size:10px;letter-spacing:0.18em;color:#5b3fc4;margin:24px 0 9px">NEXT</div>
+            <div style="font-family:'Newsreader',serif;font-size:16px;line-height:1.7;color:rgba(23,23,26,0.85)">Confirm the thumbprint on the trust policy matches the current provider, then check CloudTrail for the first denial.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px">
+      <span style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3)">03</span>
+      <span style="font-family:'Newsreader',serif;font-size:22px;color:#f5f4f2">Landing</span>
+    </div>
+
+    <div data-screen-label="03 Landing" style="box-sizing:border-box;width:1440px;height:900px;background:#0b0b0d;color:#eceaea;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,0.09)">
+      <div style="display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 24px;border-bottom:1px solid rgba(255,255,255,0.09);flex-shrink:0">
+        <div style="font-size:12px;letter-spacing:0.26em;color:#eceaea">VOXCAT</div>
+        <div style="display:flex;align-items:center;gap:20px">
+          <span style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.3)">GEMINI LIVE · SMALLWEBRTC</span>
+          <span style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.3);cursor:pointer" style-hover="color:#eceaea">PAST SESSIONS</span>
+        </div>
+      </div>
+
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden">
+        <div style="display:flex;flex-direction:column;justify-content:center;padding:0 72px;gap:40px;border-right:1px solid rgba(255,255,255,0.09)">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="font-family:'Newsreader',serif;font-size:54px;font-weight:300;line-height:1.05;color:#f5f4f2">Think out loud.<br>Keep the notes.</div>
+            <div style="font-size:12px;line-height:1.9;letter-spacing:0.03em;color:rgba(255,255,255,0.45);max-width:400px">A voice session with a role you choose. Every answer, search and file written lands in that role's own folder.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;max-width:400px">
+            <div style="display:grid;grid-template-columns:78px 1fr;gap:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.09)">
+              <span style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.3)">LATENCY</span>
+              <span style="font-size:11px;color:rgba(255,255,255,0.55)">~300 ms speech to speech</span>
+            </div>
+            <div style="display:grid;grid-template-columns:78px 1fr;gap:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.09)">
+              <span style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.3)">TOOLS</span>
+              <span style="font-size:11px;color:rgba(255,255,255,0.55)">websearch · file read / write · MCP, read-only</span>
+            </div>
+            <div style="display:grid;grid-template-columns:78px 1fr;gap:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.09)">
+              <span style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.3)">OUTPUT</span>
+              <span style="font-size:11px;color:rgba(255,255,255,0.55)">markdown, on your disk</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;justify-content:center;padding:0 72px;gap:26px">
+          <div style="font-size:10px;letter-spacing:0.18em;color:rgba(255,255,255,0.38)">SELECT PERSONA</div>
+          <div style="display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.09)">
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px;padding:18px 20px;background:rgba(139,92,246,0.09);cursor:pointer">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:5px;height:5px;background:#8b5cf6"></span>
+                  <span style="font-family:'Newsreader',serif;font-size:19px;color:#f5f4f2">Thinking Partner</span>
+                </div>
+                <span style="font-size:11px;line-height:1.6;color:rgba(255,255,255,0.5)">Probing questions, challenged assumptions, two sentences at a time.</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+                <span style="font-size:10px;letter-spacing:0.12em;color:#c4b5fd">SELECTED</span>
+                <span style="font-size:10px;color:rgba(255,255,255,0.32)">brainstorms/ · 3</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px;padding:18px 20px;background:#0b0b0d;cursor:pointer" style-hover="background:rgba(255,255,255,0.03)">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:5px;height:5px;background:rgba(255,255,255,0.2)"></span>
+                  <span style="font-family:'Newsreader',serif;font-size:19px;color:rgba(245,244,242,0.8)">Devil's Advocate</span>
+                </div>
+                <span style="font-size:11px;line-height:1.6;color:rgba(255,255,255,0.4)">Takes the opposite side of whatever you just said.</span>
+              </div>
+              <span style="font-size:10px;color:rgba(255,255,255,0.28)">devils-advocate/ · 1</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px;padding:18px 20px;background:#0b0b0d;cursor:pointer" style-hover="background:rgba(255,255,255,0.03)">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:5px;height:5px;background:rgba(255,255,255,0.2)"></span>
+                  <span style="font-family:'Newsreader',serif;font-size:19px;color:rgba(245,244,242,0.8)">Note Taker</span>
+                </div>
+                <span style="font-size:11px;line-height:1.6;color:rgba(255,255,255,0.4)">Stays quiet, writes down what you say.</span>
+              </div>
+              <span style="font-size:10px;color:rgba(255,255,255,0.28)">note-taker/ · 0</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px;padding:18px 20px;background:#0b0b0d;cursor:pointer" style-hover="background:rgba(255,255,255,0.03)">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:5px;height:5px;background:rgba(255,255,255,0.2)"></span>
+                  <span style="font-family:'Newsreader',serif;font-size:19px;color:rgba(245,244,242,0.8)">SRE Assistant</span>
+                </div>
+                <span style="font-size:11px;line-height:1.6;color:rgba(255,255,255,0.4)">Cases, KCS and Jira, read-only. Summarises findings.</span>
+              </div>
+              <span style="font-size:10px;color:rgba(255,255,255,0.28)">/data/obsidian/SFDC · 7</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <button style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;padding:14px 26px;background:#8b5cf6;border:none;color:#0b0b0d;font-weight:500;cursor:pointer" style-hover="background:#a78bfa">START SESSION</button>
+            <span style="font-size:10px;letter-spacing:0.08em;color:rgba(255,255,255,0.28)">MICROPHONE REQUIRED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px">
+      <span style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3)">04</span>
+      <span style="font-family:'Newsreader',serif;font-size:22px;color:#f5f4f2">Voice states</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.32)">the centre cell of the top rail, in every state</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,700px);gap:16px">
+
+      <div data-screen-label="Connecting" style="box-sizing:border-box;height:120px;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;gap:22px;padding:0 32px">
+        <div style="position:relative;width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(167,139,250,0.4);animation:vxHalo 1.6s ease-in-out infinite"></div>
+          <div style="width:9px;height:9px;border-radius:50%;background:rgba(139,92,246,0.6)"></div>
+        </div>
+        <div style="position:relative;width:180px;height:1px;background:rgba(255,255,255,0.12);overflow:hidden">
+          <div style="position:absolute;top:0;left:0;width:22%;height:1px;background:#8b5cf6;animation:vxSweep 1.4s linear infinite"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">CONNECTING</div>
+          <div style="font-size:10px;letter-spacing:0.08em;color:rgba(255,255,255,0.32)">NEGOTIATING WEBRTC</div>
+        </div>
+      </div>
+
+      <div data-screen-label="Listening" style="box-sizing:border-box;height:120px;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;gap:22px;padding:0 32px">
+        <div style="position:relative;width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(167,139,250,0.45);animation:vxHalo 3s ease-in-out infinite"></div>
+          <div style="width:9px;height:9px;border-radius:50%;background:#8b5cf6;box-shadow:0 0 12px rgba(139,92,246,0.85)"></div>
+        </div>
+        {{ waveDark }}
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">LISTENING</div>
+          <div style="font-size:10px;letter-spacing:0.08em;color:rgba(255,255,255,0.32)">08:41 ELAPSED</div>
+        </div>
+      </div>
+
+      <div data-screen-label="Speaking" style="box-sizing:border-box;height:120px;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;gap:22px;padding:0 32px">
+        <div style="position:relative;width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <div style="position:absolute;inset:0;border-radius:50%;background:rgba(139,92,246,0.18);animation:vxHalo 1.9s ease-in-out infinite"></div>
+          <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(167,139,250,0.6)"></div>
+          <div style="width:14px;height:14px;border-radius:50%;background:#8b5cf6;box-shadow:0 0 18px rgba(139,92,246,0.9);animation:vxBreathe 1.9s ease-in-out infinite"></div>
+        </div>
+        {{ waveSpeaking }}
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">SPEAKING</div>
+          <div style="font-size:10px;letter-spacing:0.08em;color:rgba(255,255,255,0.32)">08:47 ELAPSED</div>
+        </div>
+      </div>
+
+      <div data-screen-label="Muted" style="box-sizing:border-box;height:120px;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;gap:22px;padding:0 32px">
+        <div style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.14);flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <div style="width:11px;height:1px;background:rgba(255,255,255,0.35);transform:rotate(-45deg)"></div>
+        </div>
+        {{ waveMuted }}
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.55)">MUTED</div>
+          <div style="font-size:10px;letter-spacing:0.08em;color:rgba(255,255,255,0.3)">MIC OFF · SESSION LIVE</div>
+        </div>
+      </div>
+
+      <div data-screen-label="Thinking" style="box-sizing:border-box;height:120px;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;gap:22px;padding:0 32px">
+        <div style="position:relative;width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,0.14)"></div>
+          <div style="width:9px;height:9px;border-radius:50%;background:#8b5cf6;animation:vxBreathe 1.1s ease-in-out infinite"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;min-width:180px">
+          <span style="width:5px;height:5px;background:#8b5cf6"></span>
+          <span style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">WEBSEARCH</span>
+          <div style="position:relative;flex:1;height:1px;background:rgba(255,255,255,0.12);overflow:hidden">
+            <div style="position:absolute;top:0;left:0;width:30%;height:1px;background:#8b5cf6;animation:vxSweep 1.2s linear infinite"></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.55)">WORKING</div>
+          <div style="font-size:10px;letter-spacing:0.08em;color:rgba(255,255,255,0.3)">TOOL CALL IN FLIGHT</div>
+        </div>
+      </div>
+
+      <div data-screen-label="Ended" style="box-sizing:border-box;height:120px;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;gap:22px;padding:0 32px">
+        <div style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <div style="width:10px;height:1px;background:rgba(255,255,255,0.3)"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;flex:1">
+          <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.5)">SESSION ENDED</div>
+          <div style="font-size:10px;letter-spacing:0.08em;color:rgba(255,255,255,0.3)">08:41 · TRANSCRIPT SAVED TO BRAINSTORMS/</div>
+        </div>
+        <button style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;padding:8px 13px;background:none;border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.65);cursor:pointer" style-hover="border-color:rgba(255,255,255,0.34);color:#eceaea">NEW SESSION</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px">
+      <span style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3)">05</span>
+      <span style="font-family:'Newsreader',serif;font-size:22px;color:#f5f4f2">Tool results</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.32)">one row per branch of resultToMarkdown</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,700px);gap:16px">
+
+      <div data-screen-label="Tool results list" style="box-sizing:border-box;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);padding:20px 24px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3);padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.09)">RESULT LIST · obj.results</div>
+        <div style="display:flex;align-items:center;gap:9px;padding-top:6px">
+          <span style="width:5px;height:5px;background:#8b5cf6;flex-shrink:0"></span>
+          <span style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">WEBSEARCH</span>
+          <span style="font-size:10px;color:rgba(255,255,255,0.28)">1.2s · 3 RESULTS</span>
+        </div>
+        <div style="border-left:1px solid rgba(139,92,246,0.35);padding-left:14px;display:flex;flex-direction:column;gap:11px;margin-top:4px">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <div style="font-size:12px;line-height:1.6;color:#eceaea">Obsidian vault file conventions</div>
+            <div style="font-size:11px;line-height:1.6;color:rgba(255,255,255,0.5)">Front-matter keys are parsed on read; unknown keys are preserved verbatim.</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.28)">help.obsidian.md</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <div style="font-size:12px;line-height:1.6;color:#eceaea">Scoped write directories for agents</div>
+            <div style="font-size:11px;line-height:1.6;color:rgba(255,255,255,0.5)">Per-agent output roots avoid collision without a lock file.</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.28)">arxiv.org</div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="Tool result prose" style="box-sizing:border-box;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);padding:20px 24px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3);padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.09)">PROSE · obj.analysis</div>
+        <div style="display:flex;align-items:center;gap:9px;padding-top:6px">
+          <span style="width:5px;height:5px;background:#8b5cf6;flex-shrink:0"></span>
+          <span style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">MCP · JIRA</span>
+          <span style="font-size:10px;color:rgba(255,255,255,0.28)">search_issues · 2.4s</span>
+        </div>
+        <div style="border-left:1px solid rgba(139,92,246,0.35);padding-left:14px;margin-top:4px">
+          <div style="font-family:'Newsreader',serif;font-size:15px;line-height:1.7;color:rgba(236,234,234,0.8)">Three open tickets touch the OIDC trust policy. OHSS-51239 is the closest match — same InvalidIdentityToken signature, resolved by re-registering the provider thumbprint.</div>
+        </div>
+      </div>
+
+      <div data-screen-label="Tool result status" style="box-sizing:border-box;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3);padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.09)">STATUS · obj.status / obj.error / cancelled</div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="width:5px;height:5px;background:#8b5cf6;flex-shrink:0"></span>
+          <span style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">FILE_WRITE</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.5)">brainstorms/2026-08-28-persona-output.md</span>
+          <span style="font-size:10px;letter-spacing:0.1em;color:#4ade80;margin-left:auto">OK</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="width:5px;height:5px;background:#f87171;flex-shrink:0"></span>
+          <span style="font-size:10px;letter-spacing:0.16em;color:#f87171">FILE_READ</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.5)">outside output directory</span>
+          <span style="font-size:10px;letter-spacing:0.1em;color:#f87171;margin-left:auto">DENIED</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="width:5px;height:5px;border:1px solid rgba(255,255,255,0.25);flex-shrink:0"></span>
+          <span style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3)">SUMMARIZE_SESSION</span>
+          <span style="font-size:10px;letter-spacing:0.1em;color:rgba(255,255,255,0.24);margin-left:auto">CANCELLED</span>
+        </div>
+      </div>
+
+      <div data-screen-label="Tool result raw" style="box-sizing:border-box;background:#0b0b0d;border:1px solid rgba(255,255,255,0.09);padding:20px 24px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.3);padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.09)">FALLBACK · raw json</div>
+        <div style="display:flex;align-items:center;gap:9px;padding-top:6px">
+          <span style="width:5px;height:5px;background:#8b5cf6;flex-shrink:0"></span>
+          <span style="font-size:10px;letter-spacing:0.16em;color:#c4b5fd">MCP · REDHAT</span>
+          <span style="font-size:10px;color:rgba(255,255,255,0.28)">get_case</span>
+          <span style="font-size:10px;color:rgba(255,255,255,0.22);margin-left:auto;cursor:pointer" style-hover="color:#eceaea">COPY</span>
+        </div>
+        <div class="vxs" style="margin-top:4px;padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);font-size:11px;line-height:1.9;color:rgba(255,255,255,0.55);max-height:150px;overflow:auto;white-space:pre">{
+  "case": "03847221",
+  "severity": 2,
+  "status": "Waiting on Red Hat",
+  "cluster": "2p09uvdq3qj4o48totreockvbs"
+}</div>
+      </div>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#8b5cf6&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#8b5cf6&quot;,&quot;#7c5cf0&quot;,&quot;#a78bfa&quot;,&quot;#6d4de0&quot;],&quot;section&quot;:&quot;Voice presence&quot;},&quot;energy&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.4,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Voice presence&quot;},&quot;waveDensity&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.4,&quot;max&quot;:1.6,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Voice presence&quot;}}">
+class Component extends DCLogic {
+  bars(n, color, h, w, gap, dur, opts) {
+    const o = opts || {};
+    return React.createElement('div', {
+      style: { display: 'flex', alignItems: 'center', gap: gap + 'px', height: h + 'px', flexShrink: 0 }
+    }, Array.from({ length: n }, (_, i) => React.createElement('div', {
+      key: i,
+      style: {
+        width: w + 'px', height: '100%', background: color, transformOrigin: 'center',
+        transform: o.still ? 'scaleY(0.14)' : undefined,
+        animation: o.still ? undefined : 'vxWave ' + dur + 's ease-in-out ' + ((i % 9) * 0.13).toFixed(2) + 's infinite'
+      }
+    })));
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#8b5cf6';
+    const energy = this.props.energy ?? 1;
+    const density = this.props.waveDensity ?? 1;
+    const d = (base) => (base / Math.max(0.4, energy)).toFixed(2);
+    const n = (base) => Math.max(6, Math.round(base * density));
+    return {
+      waveDark: this.bars(n(32), accent, 24, 2, 3, d(1.6)),
+      waveSpeaking: this.bars(n(32), accent, 30, 2, 3, d(0.9)),
+      waveMuted: this.bars(n(32), 'rgba(255,255,255,0.14)', 24, 2, 3, 0, { still: true }),
+      waveLight: this.bars(n(32), '#6d4de0', 24, 2, 3, d(1.6))
+    };
+  }
+}
+</script>
+</body>
+</html>
