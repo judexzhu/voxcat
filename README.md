@@ -4,7 +4,7 @@ A voice AI agent with swappable personas. Talk to it, it calls tools, writes fil
 
 Built on [Pipecat](https://github.com/pipecat-ai/pipecat) + Gemini Live + SmallWebRTC.
 
-> **Design preview**: open [`design_handoff_voxcat_1a_instrument/Voxcat 1A Instrument.dc.html`](design_handoff_voxcat_1a_instrument/Voxcat%201A%20Instrument.dc.html) in a browser to see the full UI mockup — session dark/light, landing page, all voice states, and tool result treatments.
+![Voxcat UI Preview](docs/preview.png)
 
 ## What it does
 
