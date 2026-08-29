@@ -64,7 +64,7 @@ export function useAudioLevel(active: boolean) {
   }, [active]);
 
   function startLoop() {
-    const analyser = analyserRef.current;
+    const analyser = analyserRef.current!;
     if (!analyser) return;
     const data = new Uint8Array(analyser.frequencyBinCount);
 

@@ -36,21 +36,17 @@ Frontend connects via WebRTC. RTVI data channel carries transcripts and tool cal
 ## Quick start
 
 ```bash
-# Prerequisites: Python 3.13+, Node 20+, uv
+# Prerequisites: Python 3.13+, uv
 
-# Clone and install
+# Clone and setup
 git clone <repo> && cd voxcat
-uv sync
-cd client && npm install && cd ..
-
-# Configure
-cp .env.example .env
-# Edit .env: GOOGLE_API_KEY (required), TAVILY_API_KEY, NOTEBOOKLM_NOTEBOOK_ID
+./setup.sh
+# Edit .env: GOOGLE_API_KEY (required), TAVILY_API_KEY (optional)
 
 # Run
 uv run python bot.py
 
-# Dev (with hot reload)
+# Dev (with hot reload — requires Node 20+)
 cd client && npm run dev   # frontend on :5173
 uv run python bot.py       # backend on :7860
 ```

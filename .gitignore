@@ -5,5 +5,5 @@ __pycache__/
 output/
 sessions/
 client/node_modules/
-client/dist/
+# client/dist/ is committed — no Node.js needed to run
 *.tsbuildinfo
