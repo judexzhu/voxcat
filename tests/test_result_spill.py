@@ -5,7 +5,7 @@ import pytest
 from pipecat.frames.frames import FunctionCallResultFrame, TextFrame
 from pipecat.processors.frame_processor import FrameDirection
 
-from bot import ResultSpillProcessor
+from voxcat.bot import ResultSpillProcessor
 
 
 class FakeFrameCollector:

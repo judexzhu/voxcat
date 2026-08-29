@@ -40,20 +40,25 @@ Frontend connects via WebRTC. RTVI data channel carries transcripts and tool cal
 ```bash
 # Prerequisites: Python 3.13+, uv
 
-# Clone and setup
-git clone <repo> && cd voxcat
+# Option A: install as a tool
+uv tool install git+https://github.com/judexzhu/voxcat
+mkdir my-workspace && cd my-workspace
+voxcat init              # creates config.yaml + .env
+# Edit .env: GOOGLE_API_KEY (required), TAVILY_API_KEY (optional)
+voxcat                   # start server on :7860
+
+# Option B: clone and run
+git clone https://github.com/judexzhu/voxcat && cd voxcat
 ./setup.sh
 # Edit .env: GOOGLE_API_KEY (required), TAVILY_API_KEY (optional)
-
-# Run
-uv run python bot.py
+uv run voxcat            # start server on :7860
 
 # Dev (with hot reload — requires Node 20+)
 cd client && npm run dev   # frontend on :5173
-uv run python bot.py       # backend on :7860
+uv run voxcat              # backend on :7860
 ```
 
-Open `http://localhost:5173`, select a persona, start talking.
+Open `http://localhost:7860`, select a persona, start talking.
 
 ## Configuration
 
@@ -94,12 +99,13 @@ Custom React client with the "Instrument Panel" design:
 ## Project structure
 
 ```
-bot.py              Pipeline orchestrator, HTTP routes, entry point
-tools.py            10 tool handlers + build_tools() registry
-transcript.py       TranscriptRecorder (output + session files)
-mcp_connect.py      MCP server connection with read-only filter
-filestore.py        safe_resolve() for path traversal prevention
-config.yaml         All configuration (voice, personas, MCP servers)
+src/voxcat/
+  cli.py            CLI entry point, HTTP routes, server startup
+  bot.py            Pipeline orchestrator (live + split modes)
+  tools.py          10 tool handlers + build_tools() registry
+  transcript.py     TranscriptRecorder (output + session files)
+  mcp_connect.py    MCP server connection with read-only filter
+  filestore.py      safe_resolve() for path traversal prevention
 
 client/src/
   App.tsx            Landing page, session view, past sessions

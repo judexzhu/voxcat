@@ -1,7 +1,7 @@
 from pipecat.frames.frames import TextFrame
 from pipecat.processors.frame_processor import FrameDirection
 
-from bot import TTSPaceProcessor
+from voxcat.bot import TTSPaceProcessor
 
 
 async def test_prepends_tag_to_first_frame():

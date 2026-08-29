@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from transcript import TranscriptRecorder
+from voxcat.transcript import TranscriptRecorder
 
 
 def test_add_turn_and_get_text():
@@ -27,7 +27,7 @@ def test_save_transcript_creates_file(tmp_path):
 
 
 def test_save_session_creates_file(tmp_path):
-    with patch("transcript.SESSIONS_DIR", tmp_path):
+    with patch("voxcat.transcript.SESSIONS_DIR", tmp_path):
         r = TranscriptRecorder("output/test", persona="mybot")
         r.add_turn("user", "session content")
         path = r.save_session()
@@ -39,7 +39,7 @@ def test_save_session_creates_file(tmp_path):
 
 
 def test_save_session_appends_with_separator(tmp_path):
-    with patch("transcript.SESSIONS_DIR", tmp_path):
+    with patch("voxcat.transcript.SESSIONS_DIR", tmp_path):
         r1 = TranscriptRecorder("output/test", persona="bot")
         r1.add_turn("user", "first session")
         path = r1.save_session()

@@ -6,8 +6,8 @@ from loguru import logger
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.services.llm_service import FunctionCallParams
 
-from filestore import safe_resolve
-from transcript import TranscriptRecorder
+from .filestore import safe_resolve
+from .transcript import TranscriptRecorder
 
 
 async def web_search_handler(params: FunctionCallParams):

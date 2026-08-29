@@ -22,10 +22,15 @@ dependencies = [
 dev = ["pytest>=8.0", "pytest-asyncio>=1.0"]
 
 [project.scripts]
-voxcat = "voxcat:main"
+voxcat = "voxcat.cli:main"
+
+[tool.uv-build]
+data = [
+    { include = "client/dist", target = "voxcat/client/dist" },
+]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = ["src"]
 asyncio_mode = "auto"
 
 [build-system]

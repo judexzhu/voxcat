@@ -1,7 +1,7 @@
 import os
 from unittest.mock import MagicMock
 
-from tools import build_tools
+from voxcat.tools import build_tools
 
 
 def test_registers_requested_tools(tmp_path):

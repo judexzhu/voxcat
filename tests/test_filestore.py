@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from filestore import safe_resolve
+from voxcat.filestore import safe_resolve
 
 
 def test_valid_filename_resolves(tmp_path):

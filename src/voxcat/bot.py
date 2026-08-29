@@ -3,7 +3,6 @@ import signal
 from pathlib import Path
 
 import yaml
-from dotenv import load_dotenv
 from loguru import logger
 
 from pipecat.frames.frames import LLMRunFrame
@@ -29,12 +28,10 @@ from datetime import datetime
 from pipecat.frames.frames import FunctionCallResultFrame, TextFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
-from filestore import safe_resolve
-from mcp_connect import connect_mcp_servers
-from tools import build_tools
-from transcript import TranscriptRecorder
-
-load_dotenv(override=True)
+from .filestore import safe_resolve
+from .mcp_connect import connect_mcp_servers
+from .tools import build_tools
+from .transcript import TranscriptRecorder
 
 
 class ResultSpillProcessor(FrameProcessor):
@@ -86,8 +83,9 @@ class TTSPaceProcessor(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
-def load_config():
-    config_path = Path(__file__).parent / "config.yaml"
+def load_config(config_path: str | Path | None = None):
+    if config_path is None:
+        config_path = Path.cwd() / "config.yaml"
     with open(config_path) as f:
         return yaml.safe_load(f)
 
@@ -279,171 +277,3 @@ async def bot(runner_args: RunnerArguments):
     await run_bot(transport, runner_args)
 
 
-if __name__ == "__main__":
-    from fastapi.staticfiles import StaticFiles
-
-    from pipecat.runner.run import app, main
-
-    config = load_config()
-    available_personas = list(config["persona"]["profiles"].keys())
-
-    @app.get("/api/personas")
-    async def list_personas():
-        return {"personas": available_personas, "default": config["persona"]["default"]}
-
-    @app.get("/api/files/tree")
-    async def file_tree():
-        tree = []
-        for name in available_personas:
-            profile = config["persona"]["profiles"][name]
-            output_dir = Path(profile.get("output", {}).get("directory", f"output/{name}"))
-            output_dir.mkdir(parents=True, exist_ok=True)
-            files = sorted(output_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
-            tree.append({
-                "persona": name,
-                "label": {"thinking-partner": "Thinking Partner", "devils-advocate": "Devil's Advocate",
-                          "note-taker": "Note Taker", "sre": "SRE Assistant"}.get(name, name),
-                "files": [
-                    {"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
-                    for f in files[:50] if f.is_file()
-                ],
-            })
-        return {"tree": tree}
-
-    @app.get("/api/files")
-    async def list_files(persona: str = "thinking-partner"):
-        profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
-        output_dir.mkdir(parents=True, exist_ok=True)
-        files = sorted(output_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
-        return {
-            "directory": str(output_dir),
-            "files": [
-                {"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
-                for f in files[:50] if f.is_file()
-            ],
-        }
-
-    @app.get("/api/files/{filename:path}")
-    async def read_file(filename: str, persona: str = "thinking-partner"):
-        profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
-        path = safe_resolve(output_dir, filename)
-        if not path or not path.exists():
-            return {"error": "File not found"}
-        return {"filename": filename, "content": path.read_text()[:10000]}
-
-    @app.delete("/api/files/{filename:path}")
-    async def delete_file(filename: str, persona: str = "thinking-partner"):
-        profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
-        path = safe_resolve(output_dir, filename)
-        if not path or not path.exists():
-            return {"error": "File not found"}
-        path.unlink()
-        return {"deleted": filename}
-
-    @app.post("/api/files/{filename:path}/rename")
-    async def rename_file(filename: str, new_name: str, persona: str = "thinking-partner"):
-        profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
-        path = safe_resolve(output_dir, filename)
-        if not path or not path.exists():
-            return {"error": "File not found"}
-        if not new_name.endswith(".md") and not new_name.endswith(".txt"):
-            new_name += ".md"
-        new_path = safe_resolve(output_dir, new_name)
-        if not new_path:
-            return {"error": "Invalid name"}
-        path.rename(new_path)
-        return {"filename": new_name}
-
-    from transcript import SESSIONS_DIR
-
-    @app.get("/api/sessions")
-    async def list_sessions():
-        sessions = []
-        if SESSIONS_DIR.is_dir():
-            for persona_dir in sorted(SESSIONS_DIR.iterdir()):
-                if not persona_dir.is_dir():
-                    continue
-                files = sorted(persona_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
-                for f in files[:20]:
-                    sessions.append({
-                        "persona": persona_dir.name,
-                        "filename": f.name,
-                        "modified": f.stat().st_mtime,
-                    })
-        sessions.sort(key=lambda s: s["modified"], reverse=True)
-        return {"sessions": sessions}
-
-    @app.get("/api/sessions/{persona}/{filename}")
-    async def read_session(persona: str, filename: str):
-        path = safe_resolve(SESSIONS_DIR / persona, filename)
-        if not path or not path.exists():
-            return {"error": "Session not found"}
-        return {"content": path.read_text()[:20000], "persona": persona, "filename": filename}
-
-    @app.delete("/api/sessions/{persona}/{filename}")
-    async def delete_session(persona: str, filename: str):
-        path = safe_resolve(SESSIONS_DIR / persona, filename)
-        if not path or not path.exists():
-            return {"error": "Session not found"}
-        path.unlink()
-        return {"deleted": filename}
-
-    @app.post("/api/sessions/{persona}/{filename}/rename")
-    async def rename_session(persona: str, filename: str, new_name: str):
-        path = safe_resolve(SESSIONS_DIR / persona, filename)
-        if not path or not path.exists():
-            return {"error": "Session not found"}
-        if not new_name.endswith(".md"):
-            new_name += ".md"
-        new_path = safe_resolve(SESSIONS_DIR / persona, new_name)
-        if not new_path:
-            return {"error": "Invalid name"}
-        path.rename(new_path)
-        return {"filename": new_name}
-
-    notebook_id = os.environ.get("NOTEBOOKLM_NOTEBOOK_ID", "")
-
-    @app.get("/api/notebooklm/sources")
-    async def nlm_sources():
-        if not notebook_id:
-            return {"sources": []}
-        try:
-            from notebooklm import NotebookLMClient
-            async with NotebookLMClient.from_storage() as client:
-                sources = await client.sources.list(notebook_id)
-                return {"sources": [
-                    {"id": s.id, "title": s.title}
-                    for s in sources
-                ]}
-        except Exception as e:
-            logger.error(f"NotebookLM sources error: {e}")
-            return {"sources": []}
-
-    @app.get("/api/notebooklm/sources/{source_id}")
-    async def nlm_source_content(source_id: str):
-        if not notebook_id:
-            return {"error": "NotebookLM not configured"}
-        try:
-            from notebooklm import NotebookLMClient
-            async with NotebookLMClient.from_storage() as client:
-                fulltext = await client.sources.get_fulltext(notebook_id, source_id, output_format="markdown")
-                return {"content": fulltext.content[:20000]}
-        except Exception as e:
-            logger.error(f"NotebookLM source read error: {e}")
-            return {"error": str(e)}
-
-    client_dist = Path(__file__).parent / "client" / "dist"
-    if client_dist.is_dir():
-        app.mount("/client", StaticFiles(directory=str(client_dist), html=True))
-
-        from fastapi.responses import RedirectResponse
-
-        @app.get("/", include_in_schema=False)
-        async def root_redirect():
-            return RedirectResponse(url="/client/")
-
-    main()
