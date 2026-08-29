@@ -346,75 +346,78 @@ function PastSessions({
           <ThemeToggle />
         </div>
       </div>
-      <div className="landing-body">
-        <div className="landing-left" style={{ gap: 0, padding: 0 }}>
-          <div className="pane" style={{ height: "100%" }}>
-            <div className="pane-header" style={{ padding: "13px 24px" }}>
-              <span className="pane-label">PAST SESSIONS</span>
-              <span className="pane-meta">{sessions.length} SESSIONS</span>
-            </div>
-            <div className="vx-scroll" style={{ flex: 1, overflowY: "auto" }}>
-              {sessions.map((s) => (
-                <div
-                  key={`${s.persona}/${s.filename}`}
-                  className={`output-file ${
-                    selected?.persona === s.persona &&
-                    selected?.filename === s.filename
-                      ? "active"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setSelected({ persona: s.persona, filename: s.filename })
-                  }
-                  style={{ paddingLeft: 24 }}
-                >
-                  <span style={{ color: "var(--text-4)", marginRight: 8 }}>
-                    {s.persona.toUpperCase()}
-                  </span>
-                  {s.filename}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="landing-right" style={{ padding: "0", gap: 0 }}>
-          {selected ? (
+      <div className="landing-body" style={{ display: "flex", overflow: "hidden" }}>
+        <Group orientation="horizontal" id="past-panels">
+          <Panel defaultSize={35} minSize={20} id="past-list">
             <div className="pane" style={{ height: "100%" }}>
-              <div className="pane-header pane-header-document">
-                <span
-                  className="doc-header-name pane-meta-interactive"
-                  title="Click to rename"
-                  onClick={() => {
-                    const name = prompt("Rename session:", selected.filename.replace(".md", ""));
-                    if (!name) return;
-                    fetch(`/api/sessions/${selected.persona}/${selected.filename}/rename?new_name=${encodeURIComponent(name)}`, { method: "POST" })
-                      .then((r) => r.json())
-                      .then((d) => {
-                        if (d.filename) {
-                          setSelected({ persona: selected.persona, filename: d.filename });
-                          fetch("/api/sessions").then((r) => r.json()).then((d) => setSessions(d.sessions || []));
-                        }
-                      });
-                  }}
-                >
-                  {selected.filename}
-                </span>
-                <button
-                  className="btn-primary"
-                  style={{ padding: "8px 16px", fontSize: "10px" }}
-                  onClick={() => onContinue(selected.persona, content, selected.filename)}
-                >
-                  CONTINUE SESSION
-                </button>
+              <div className="pane-header" style={{ padding: "13px 24px" }}>
+                <span className="pane-label">PAST SESSIONS</span>
+                <span className="pane-meta">{sessions.length} SESSIONS</span>
               </div>
-              <div className="doc-scroll vx-scroll">
-                <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+              <div className="vx-scroll" style={{ flex: 1, overflowY: "auto" }}>
+                {sessions.map((s) => (
+                  <div
+                    key={`${s.persona}/${s.filename}`}
+                    className={`output-file ${
+                      selected?.persona === s.persona &&
+                      selected?.filename === s.filename
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setSelected({ persona: s.persona, filename: s.filename })
+                    }
+                    style={{ paddingLeft: 24 }}
+                  >
+                    <span style={{ color: "var(--text-4)", marginRight: 8 }}>
+                      {s.persona.toUpperCase()}
+                    </span>
+                    {s.filename}
+                  </div>
+                ))}
               </div>
             </div>
-          ) : (
-            <div className="doc-empty">Select a session to preview</div>
-          )}
-        </div>
+          </Panel>
+          <Separator className="grid-separator" />
+          <Panel defaultSize={65} minSize={30} id="past-preview">
+            {selected ? (
+              <div className="pane" style={{ height: "100%" }}>
+                <div className="pane-header pane-header-document">
+                  <span
+                    className="doc-header-name pane-meta-interactive"
+                    title="Click to rename"
+                    onClick={() => {
+                      const name = prompt("Rename session:", selected.filename.replace(".md", ""));
+                      if (!name) return;
+                      fetch(`/api/sessions/${selected.persona}/${selected.filename}/rename?new_name=${encodeURIComponent(name)}`, { method: "POST" })
+                        .then((r) => r.json())
+                        .then((d) => {
+                          if (d.filename) {
+                            setSelected({ persona: selected.persona, filename: d.filename });
+                            fetch("/api/sessions").then((r) => r.json()).then((d) => setSessions(d.sessions || []));
+                          }
+                        });
+                    }}
+                  >
+                    {selected.filename}
+                  </span>
+                  <button
+                    className="btn-primary"
+                    style={{ padding: "8px 16px", fontSize: "10px" }}
+                    onClick={() => onContinue(selected.persona, content, selected.filename)}
+                  >
+                    CONTINUE SESSION
+                  </button>
+                </div>
+                <div className="doc-scroll vx-scroll">
+                  <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+                </div>
+              </div>
+            ) : (
+              <div className="doc-empty">Select a session to preview</div>
+            )}
+          </Panel>
+        </Group>
       </div>
     </div>
   );

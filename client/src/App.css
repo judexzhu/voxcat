@@ -206,7 +206,7 @@ body {
 [data-theme="light"] .persona-row:hover { background: rgba(0,0,0,0.03); }
 
 .persona-row.selected { background: rgba(139,92,246,0.09); }
-[data-theme="light"] .persona-row.selected { background: rgba(109,77,224,0.07); }
+[data-theme="light"] .persona-row.selected { background: rgba(109,77,224,0.09); }
 
 .persona-row-left {
   display: flex;
@@ -227,6 +227,8 @@ body {
   background: rgba(255,255,255,0.2);
 }
 
+[data-theme="light"] .persona-dot { background: rgba(23,23,26,0.2); }
+
 .persona-row.selected .persona-dot { background: var(--accent); }
 
 .persona-name {
@@ -235,6 +237,8 @@ body {
   font-weight: 400;
   color: rgba(245,244,242,0.8);
 }
+
+[data-theme="light"] .persona-name { color: rgba(23,23,26,0.7); }
 
 .persona-row.selected .persona-name { color: var(--text-strong); }
 
@@ -245,6 +249,7 @@ body {
 }
 
 .persona-row.selected .persona-desc { color: rgba(255,255,255,0.5); }
+[data-theme="light"] .persona-row.selected .persona-desc { color: rgba(23,23,26,0.55); }
 
 .persona-row-right {
   display: flex;
@@ -369,6 +374,11 @@ body {
   height: 5px;
   border-radius: 50%;
   background: var(--ok);
+}
+
+.mic-dot-syncing {
+  background: var(--accent) !important;
+  animation: vxBreathe 0.6s ease-in-out infinite;
 }
 
 .mic-label {
@@ -1080,6 +1090,36 @@ body {
 }
 
 .doc-scroll strong { color: var(--text); }
+
+/* ——— Theme toggle ——— */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.14);
+  color: var(--text-4);
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.theme-toggle:hover {
+  border-color: rgba(255,255,255,0.34);
+  color: var(--text);
+}
+
+[data-theme="light"] .theme-toggle {
+  border-color: rgba(23,23,26,0.18);
+  color: var(--text-4);
+}
+
+[data-theme="light"] .theme-toggle:hover {
+  border-color: rgba(23,23,26,0.42);
+  color: var(--text);
+}
 
 /* ——— Utility ——— */
 .error-msg {

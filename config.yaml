@@ -32,6 +32,8 @@ persona:
   default: "thinking-partner"
   common_instruction: |
     Before calling ANY tool, say a brief phrase like "Let me check", "Looking that up", "One moment" — never go silent while a tool runs.
+    NEVER call the same tool twice with the same arguments. If a tool already returned results, use those results — do not re-call it.
+    After a tool returns, ALWAYS speak the result to the user before calling another tool.
     When asked to save, don't confirm — just save.
     When asked the time, call get_current_time.
     Questions with "why", "root cause", "analyze", "compare", "trade-offs" → ALWAYS call deep_analysis.

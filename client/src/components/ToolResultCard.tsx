@@ -10,16 +10,26 @@ interface Props {
 
 type ResultKind = "results" | "prose" | "status" | "raw";
 
+function tryParseJson(val: unknown): unknown {
+  if (typeof val === "string" && val.trimStart().startsWith("{")) {
+    try { return JSON.parse(val); } catch { /* not JSON */ }
+  }
+  return val;
+}
+
 function classify(result: unknown, cancelled: boolean): ResultKind {
   if (cancelled) return "status";
-  if (result && typeof result === "object") {
-    const obj = result as Record<string, unknown>;
+  const parsed = tryParseJson(result);
+  if (parsed && typeof parsed === "object") {
+    const obj = parsed as Record<string, unknown>;
     if (obj.error) return "status";
     if (obj.status) return "status";
     if (Array.isArray(obj.results)) return "results";
     if (Array.isArray(obj.files)) return "results";
+    if (Array.isArray(obj.issues)) return "results";
     if (obj.analysis || obj.report || obj.content) return "prose";
   }
+  if (typeof parsed === "string") return "prose";
   return "raw";
 }
 
@@ -40,7 +50,7 @@ function ResultsList({
   result: Record<string, unknown>;
   onFileClick?: (filename: string) => void;
 }) {
-  const items = (result.results || result.files) as Array<Record<string, unknown>>;
+  const items = (result.results || result.files || result.issues) as Array<Record<string, unknown>>;
   const isFiles = Array.isArray(result.files);
 
   return (
@@ -51,12 +61,16 @@ function ResultsList({
             className={`tool-result-title ${isFiles && onFileClick ? "tool-subject-link" : ""}`}
             onClick={isFiles && onFileClick ? () => onFileClick(String(r.name)) : undefined}
           >
-            {String(r.title || r.name || "")}
+            {String(r.title || r.key || r.name || "")}
+            {r.key && r.summary ? ` — ${String(r.summary)}` : ""}
           </div>
-          {!isFiles && r.content != null && (
+          {!isFiles && !r.key && r.content != null && (
             <div className="tool-result-snippet">
               {String(r.content).slice(0, 200)}
             </div>
+          )}
+          {r.status != null && (
+            <div className="tool-result-source">{String(r.status)}{r.priority ? ` · ${String(r.priority)}` : ""}</div>
           )}
           {r.url != null && (
             <a
@@ -161,30 +175,32 @@ export function ToolResultCard({
   latencyMs,
   onFileClick,
 }: Props) {
+  const parsed = tryParseJson(result);
   const kind = classify(result, cancelled);
 
   if (kind === "status") {
     return (
       <StatusResult
         functionName={functionName}
-        result={result}
+        result={parsed}
         cancelled={cancelled}
         onFileClick={onFileClick}
       />
     );
   }
 
-  const obj = result as Record<string, unknown>;
+  const obj = parsed as Record<string, unknown>;
   const meta: string[] = [];
   if (latencyMs) meta.push(formatLatency(latencyMs));
   if (kind === "results") {
-    const items = (obj.results || obj.files) as unknown[];
+    const items = (obj.results || obj.files || obj.issues) as unknown[];
     if (Array.isArray(items)) {
-      meta.push(
-        Array.isArray(obj.files)
-          ? `${items.length} FILES`
-          : `${items.length} RESULTS`,
-      );
+      const label = Array.isArray(obj.files)
+        ? "FILES"
+        : Array.isArray(obj.issues)
+          ? "ISSUES"
+          : "RESULTS";
+      meta.push(`${items.length} ${label}`);
     }
   }
 
@@ -198,8 +214,12 @@ export function ToolResultCard({
         )}
       </div>
       {kind === "results" && <ResultsList result={obj} onFileClick={onFileClick} />}
-      {kind === "prose" && <ProseResult result={obj} />}
-      {kind === "raw" && <RawResult result={result} functionName={functionName} />}
+      {kind === "prose" && (
+        typeof parsed === "string"
+          ? <div className="tool-result-prose">{parsed}</div>
+          : <ProseResult result={obj} />
+      )}
+      {kind === "raw" && <RawResult result={parsed} functionName={functionName} />}
     </div>
   );
 }

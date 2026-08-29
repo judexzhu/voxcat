@@ -30,11 +30,25 @@ function findLatency(
 
 export function ActivityPanel({ entries, speaking, onFileClick }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledRef = useRef(false);
   const [toolsOnly, setToolsOnly] = useState(false);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+      userScrolledRef.current = !atBottom;
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el && !userScrolledRef.current) {
+      el.scrollTop = el.scrollHeight;
+    }
   });
 
   const visible = toolsOnly

@@ -1,26 +1,33 @@
 import { useEffect, useRef, useState } from "react";
 
 const BAR_COUNT = 32;
+const REST = Array(BAR_COUNT).fill(0.14);
 
 export function useAudioLevel(active: boolean) {
-  const [levels, setLevels] = useState<number[]>(() =>
-    Array(BAR_COUNT).fill(0.14),
-  );
+  const [levels, setLevels] = useState<number[]>(REST);
   const ctxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const rafRef = useRef(0);
-  const streamRef = useRef<MediaStream | null>(null);
+  const activeRef = useRef(active);
+  const initRef = useRef(false);
+
+  activeRef.current = active;
 
   useEffect(() => {
     if (!active) {
-      setLevels(Array(BAR_COUNT).fill(0.14));
+      setLevels(REST);
+      cancelAnimationFrame(rafRef.current);
+      return;
+    }
+
+    if (initRef.current && analyserRef.current) {
+      startLoop();
       return;
     }
 
     let cancelled = false;
 
-    async function start() {
+    async function init() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
@@ -29,7 +36,6 @@ export function useAudioLevel(active: boolean) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
-        streamRef.current = stream;
 
         const ctx = new AudioContext();
         ctxRef.current = ctx;
@@ -41,46 +47,44 @@ export function useAudioLevel(active: boolean) {
 
         const source = ctx.createMediaStreamSource(stream);
         source.connect(analyser);
-        sourceRef.current = source;
 
-        const data = new Uint8Array(analyser.frequencyBinCount);
-
-        function tick() {
-          if (cancelled) return;
-          analyser.getByteFrequencyData(data);
-
-          const bars: number[] = [];
-          const binCount = data.length;
-          for (let i = 0; i < BAR_COUNT; i++) {
-            const idx = Math.floor((i / BAR_COUNT) * binCount);
-            const v = data[idx] / 255;
-            bars.push(Math.max(0.14, v));
-          }
-          setLevels(bars);
-          rafRef.current = requestAnimationFrame(tick);
-        }
-
-        rafRef.current = requestAnimationFrame(tick);
+        initRef.current = true;
+        startLoop();
       } catch {
-        // No mic access — stay at rest
+        // No mic access
       }
     }
 
-    start();
+    init();
 
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafRef.current);
-      sourceRef.current?.disconnect();
-      analyserRef.current?.disconnect();
-      ctxRef.current?.close();
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-      ctxRef.current = null;
-      analyserRef.current = null;
-      sourceRef.current = null;
     };
   }, [active]);
+
+  function startLoop() {
+    const analyser = analyserRef.current;
+    if (!analyser) return;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    function tick() {
+      if (!activeRef.current) return;
+      analyser.getByteFrequencyData(data);
+
+      const bars: number[] = [];
+      const binCount = data.length;
+      for (let i = 0; i < BAR_COUNT; i++) {
+        const idx = Math.floor((i / BAR_COUNT) * binCount);
+        const v = data[idx] / 255;
+        bars.push(Math.max(0.14, v));
+      }
+      setLevels(bars);
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+  }
 
   return levels;
 }
