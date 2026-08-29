@@ -83,6 +83,9 @@ class TTSPaceProcessor(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
+_config = None
+
+
 def load_config(config_path: str | Path | None = None):
     if config_path is None:
         config_path = Path.cwd() / "config.yaml"
@@ -90,8 +93,13 @@ def load_config(config_path: str | Path | None = None):
         return yaml.safe_load(f)
 
 
+def set_config(config: dict):
+    global _config
+    _config = config
+
+
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
-    config = load_config()
+    config = _config or load_config()
 
     body = runner_args.body or {}
     persona_name = body.get("persona") or config["persona"]["default"]

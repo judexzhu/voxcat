@@ -65,7 +65,7 @@ def main():
         load_dotenv(env_path, override=True)
     load_dotenv(override=True)
 
-    from .bot import load_config
+    from .bot import load_config, set_config
     from .filestore import safe_resolve
     from . import transcript
 
@@ -101,6 +101,9 @@ def main():
 
     # Sessions dir under DATA_DIR
     transcript.SESSIONS_DIR = DATA_DIR / "sessions"
+
+    # Make config available to bot.run_bot() when called by pipecat runner
+    set_config(config)
 
     from fastapi.staticfiles import StaticFiles
     from pipecat.runner.run import app, main as pipecat_main
