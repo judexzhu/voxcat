@@ -53,7 +53,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     builtin_tools = persona.get("tools", {}).get("builtin", [])
     mcp_server_names = persona.get("tools", {}).get("mcp_servers", [])
 
-    recorder = TranscriptRecorder(output_dir)
+    recorder = TranscriptRecorder(output_dir, persona=persona_name)
     tools = build_tools(builtin_tools, output_dir, recorder)
 
     mcp_clients = []
@@ -99,14 +99,23 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     runner = WorkerRunner(handle_sigint=runner_args.handle_sigint)
     await runner.add_workers(worker)
 
+    prior_context = body.get("context", "")
+
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info(f"Client connected — starting {persona_name} session")
-        context.add_message({
-            "role": "developer",
-            "content": "Greet the user briefly. Introduce yourself based on your role. "
-            "Ask what they'd like to work on today.",
-        })
+        if prior_context:
+            context.add_message({
+                "role": "developer",
+                "content": f"The user is continuing a previous session. Here is the transcript:\n\n{prior_context}\n\n"
+                "Welcome them back briefly. Reference what was discussed. Ask what they'd like to continue with.",
+            })
+        else:
+            context.add_message({
+                "role": "developer",
+                "content": "Greet the user briefly. Introduce yourself based on your role. "
+                "Ask what they'd like to work on today.",
+            })
         await worker.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
@@ -114,6 +123,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.info("Client disconnected")
         filepath = recorder.save_transcript()
         logger.info(f"Transcript saved to {filepath}")
+        session_path = recorder.save_session()
+        logger.info(f"Session saved to {session_path}")
         for mc in mcp_clients:
             await mc.close()
         await runner.cancel()
@@ -207,6 +218,32 @@ if __name__ == "__main__":
         if not path or not path.exists():
             return {"error": "File not found"}
         return {"filename": filename, "content": path.read_text()[:10000]}
+
+    from transcript import SESSIONS_DIR
+
+    @app.get("/api/sessions")
+    async def list_sessions():
+        sessions = []
+        if SESSIONS_DIR.is_dir():
+            for persona_dir in sorted(SESSIONS_DIR.iterdir()):
+                if not persona_dir.is_dir():
+                    continue
+                files = sorted(persona_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
+                for f in files[:20]:
+                    sessions.append({
+                        "persona": persona_dir.name,
+                        "filename": f.name,
+                        "modified": f.stat().st_mtime,
+                    })
+        sessions.sort(key=lambda s: s["modified"], reverse=True)
+        return {"sessions": sessions}
+
+    @app.get("/api/sessions/{persona}/{filename}")
+    async def read_session(persona: str, filename: str):
+        path = safe_resolve(SESSIONS_DIR / persona, filename)
+        if not path or not path.exists():
+            return {"error": "Session not found"}
+        return {"content": path.read_text()[:20000], "persona": persona, "filename": filename}
 
     notebook_id = os.environ.get("NOTEBOOKLM_NOTEBOOK_ID", "")
 

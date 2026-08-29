@@ -2,10 +2,14 @@ from datetime import datetime
 from pathlib import Path
 
 
+SESSIONS_DIR = Path("sessions")
+
+
 class TranscriptRecorder:
-    def __init__(self, output_dir: str):
+    def __init__(self, output_dir: str, persona: str = ""):
         self._output_dir = Path(output_dir)
         self._output_dir.mkdir(parents=True, exist_ok=True)
+        self._persona = persona
         self._turns: list[dict] = []
         self._session_start = datetime.now()
         self._topic = "untitled"
@@ -55,6 +59,33 @@ class TranscriptRecorder:
                 ts = ts.strftime("%H:%M:%S")
             role = turn["role"].capitalize()
             lines.append(f"**[{ts}] {role}:** {turn['content']}")
+            lines.append("")
+
+        filepath.write_text("\n".join(lines))
+        return filepath
+
+    def save_session(self) -> Path:
+        session_dir = SESSIONS_DIR / self._persona if self._persona else SESSIONS_DIR
+        session_dir.mkdir(parents=True, exist_ok=True)
+        ts = self._session_start.strftime("%Y-%m-%d_%H%M%S")
+        filename = f"{ts}.md"
+        filepath = session_dir / filename
+
+        duration = datetime.now() - self._session_start
+        minutes = int(duration.total_seconds() // 60)
+
+        lines = [
+            f"# Session: {self._persona or 'unknown'}",
+            f"**Date:** {self._session_start.strftime('%Y-%m-%d %H:%M')}  |  **Duration:** {minutes}m",
+            "",
+        ]
+
+        for turn in self._turns:
+            ts_str = turn["timestamp"]
+            if hasattr(ts_str, "strftime"):
+                ts_str = ts_str.strftime("%H:%M:%S")
+            role = turn["role"].capitalize()
+            lines.append(f"**[{ts_str}] {role}:** {turn['content']}")
             lines.append("")
 
         filepath.write_text("\n".join(lines))

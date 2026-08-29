@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .venv/
 output/
+sessions/
 client/node_modules/
 client/dist/
 *.tsbuildinfo

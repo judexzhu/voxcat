@@ -7,6 +7,8 @@ import {
   usePipecatClientTransportState,
 } from "@pipecat-ai/client-react";
 import { Group, Panel, Separator } from "react-resizable-panels";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { PersonaSelector } from "./components/PersonaSelector";
 import { ActivityPanel } from "./components/ActivityPanel";
 import { OutputTree } from "./components/OutputTree";
@@ -16,6 +18,53 @@ import type { VoiceState } from "./components/VoiceInstrument";
 import { useActivityLog } from "./hooks/useActivityLog";
 import { useAudioLevel } from "./hooks/useAudioLevel";
 import "./App.css";
+
+function ThemeToggle() {
+  const [, forceUpdate] = useState(0);
+
+  const getTheme = () =>
+    document.documentElement.getAttribute("data-theme") === "light"
+      ? "light"
+      : "dark";
+
+  useEffect(() => {
+    const stored = localStorage.getItem("voxcat-theme");
+    if (stored === "light" || stored === "dark") {
+      document.documentElement.setAttribute("data-theme", stored);
+    }
+  }, []);
+
+  const toggle = () => {
+    const next = getTheme() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("voxcat-theme", next);
+    forceUpdate((n) => n + 1);
+  };
+
+  const theme = getTheme();
+
+  return (
+    <button className="theme-toggle" onClick={toggle} title={theme === "dark" ? "Light mode" : "Dark mode"}>
+      {theme === "dark" ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 function useElapsed(running: boolean): string {
   const [seconds, setSeconds] = useState(0);
@@ -36,26 +85,15 @@ function useElapsed(running: boolean): string {
   return `${m}:${s}`;
 }
 
-function useVoiceState(
+function deriveVoiceState(
   entries: ReturnType<typeof useActivityLog>["entries"],
   speaking: boolean,
-): {
-  state: VoiceState;
-  toolName?: string;
-} {
-  const transportState = usePipecatClientTransportState();
-  const { isMicEnabled } = usePipecatClientMicControl();
-
-  const connecting =
-    transportState === "connecting" ||
-    transportState === "authenticating" ||
-    transportState === "initializing";
-
+  isMicEnabled: boolean,
+  connecting: boolean,
+): { state: VoiceState; toolName?: string } {
   if (connecting) return { state: "connecting" };
-
   if (!isMicEnabled) return { state: "muted" };
 
-  // Check for in-flight tool call
   const lastToolStart = [...entries]
     .reverse()
     .find((e) => e.kind === "tool-start");
@@ -77,7 +115,6 @@ function useVoiceState(
   }
 
   if (speaking) return { state: "speaking" };
-
   return { state: "listening" };
 }
 
@@ -92,16 +129,34 @@ function SessionView({
 }) {
   const { entries, speaking } = useActivityLog();
   const { enableMic, isMicEnabled } = usePipecatClientMicControl();
+  const [muted, setMuted] = useState(false);
+  const [unmuting, setUnmuting] = useState(false);
+
+  useEffect(() => {
+    if (unmuting && isMicEnabled) {
+      setMuted(false);
+      setUnmuting(false);
+    }
+  }, [unmuting, isMicEnabled]);
   const transportState = usePipecatClientTransportState();
   const connected =
     transportState === "ready" || transportState === "connected";
+  const connecting =
+    transportState === "connecting" ||
+    transportState === "authenticating" ||
+    transportState === "initializing";
   const [ended, setEnded] = useState(false);
   const [selected, setSelected] = useState<{
     persona: string;
     filename: string;
   } | null>(null);
 
-  const { state: voiceState, toolName } = useVoiceState(entries, speaking);
+  const { state: voiceState, toolName } = deriveVoiceState(
+    entries,
+    speaking,
+    !muted,
+    connecting,
+  );
   const elapsed = useElapsed(connected || ended ? true : false);
   const currentVoiceState: VoiceState = ended ? "ended" : voiceState;
   const micActive =
@@ -131,6 +186,7 @@ function SessionView({
           />
         </div>
         <div className="rail-right">
+          <ThemeToggle />
           {ended ? (
             <button
               className="btn-rail"
@@ -142,18 +198,27 @@ function SessionView({
             <>
               <div className="mic-indicator">
                 <div
-                  className="mic-dot"
-                  style={!isMicEnabled ? { background: "var(--text-5)" } : {}}
+                  className={`mic-dot ${unmuting ? "mic-dot-syncing" : ""}`}
+                  style={muted && !unmuting ? { background: "var(--text-5)" } : {}}
                 />
                 <span className="mic-label">
-                  {isMicEnabled ? "MIC ON" : "MIC OFF"}
+                  {unmuting ? "SYNCING" : muted ? "MIC OFF" : "MIC ON"}
                 </span>
               </div>
               <button
                 className="btn-rail"
-                onClick={() => enableMic(!isMicEnabled)}
+                disabled={unmuting}
+                onClick={() => {
+                  if (muted) {
+                    setUnmuting(true);
+                    enableMic(true);
+                  } else {
+                    setMuted(true);
+                    enableMic(false);
+                  }
+                }}
               >
-                {isMicEnabled ? "MUTE" : "UNMUTE"}
+                {unmuting ? "SYNCING" : muted ? "UNMUTE" : "MUTE"}
               </button>
               <button
                 className="btn-rail end"
@@ -202,9 +267,11 @@ function SessionView({
 function SessionPage({
   persona,
   outputDir,
+  context,
 }: {
   persona: string;
   outputDir: string;
+  context?: string;
 }) {
   return (
     <PipecatAppBase
@@ -214,7 +281,7 @@ function SessionPage({
         requestData: {
           transport: "webrtc",
           enableDefaultIceServers: true,
-          body: { persona },
+          body: { persona, ...(context ? { context } : {}) },
         },
       }}
       connectOnMount
@@ -230,8 +297,124 @@ function SessionPage({
   );
 }
 
-function LandingPage({ onStart }: { onStart: (persona: string) => void }) {
+function PastSessions({
+  onContinue,
+  onBack,
+}: {
+  onContinue: (persona: string, context: string) => void;
+  onBack: () => void;
+}) {
+  const [sessions, setSessions] = useState<
+    Array<{ persona: string; filename: string; modified: number }>
+  >([]);
+  const [selected, setSelected] = useState<{
+    persona: string;
+    filename: string;
+  } | null>(null);
+  const [content, setContent] = useState("");
+
+  useEffect(() => {
+    fetch("/api/sessions")
+      .then((r) => r.json())
+      .then((d) => setSessions(d.sessions || []));
+  }, []);
+
+  useEffect(() => {
+    if (!selected) return;
+    fetch(`/api/sessions/${selected.persona}/${selected.filename}`)
+      .then((r) => r.json())
+      .then((d) => setContent(d.content || ""));
+  }, [selected?.persona, selected?.filename]);
+
+  return (
+    <div className="app">
+      <div className="landing-header">
+        <div className="wordmark">VOXCAT</div>
+        <div className="landing-header-right">
+          <span
+            className="landing-header-link"
+            onClick={onBack}
+          >
+            NEW SESSION
+          </span>
+          <ThemeToggle />
+        </div>
+      </div>
+      <div className="landing-body">
+        <div className="landing-left" style={{ gap: 0, padding: 0 }}>
+          <div className="pane" style={{ height: "100%" }}>
+            <div className="pane-header" style={{ padding: "13px 24px" }}>
+              <span className="pane-label">PAST SESSIONS</span>
+              <span className="pane-meta">{sessions.length} SESSIONS</span>
+            </div>
+            <div className="vx-scroll" style={{ flex: 1, overflowY: "auto" }}>
+              {sessions.map((s) => (
+                <div
+                  key={`${s.persona}/${s.filename}`}
+                  className={`output-file ${
+                    selected?.persona === s.persona &&
+                    selected?.filename === s.filename
+                      ? "active"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setSelected({ persona: s.persona, filename: s.filename })
+                  }
+                  style={{ paddingLeft: 24 }}
+                >
+                  <span style={{ color: "var(--text-4)", marginRight: 8 }}>
+                    {s.persona.toUpperCase()}
+                  </span>
+                  {s.filename}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="landing-right" style={{ padding: "0", gap: 0 }}>
+          {selected ? (
+            <div className="pane" style={{ height: "100%" }}>
+              <div className="pane-header pane-header-document">
+                <span className="doc-header-name">{selected.filename}</span>
+                <button
+                  className="btn-primary"
+                  style={{ padding: "8px 16px", fontSize: "10px" }}
+                  onClick={() => onContinue(selected.persona, content)}
+                >
+                  CONTINUE SESSION
+                </button>
+              </div>
+              <div className="doc-scroll vx-scroll">
+                <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+              </div>
+            </div>
+          ) : (
+            <div className="doc-empty">Select a session to preview</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LandingPage({
+  onStart,
+  onContinue,
+}: {
+  onStart: (persona: string) => void;
+  onContinue: (persona: string, context: string) => void;
+}) {
   const [persona, setPersona] = useState("thinking-partner");
+  const [view, setView] = useState<"select" | "history">("select");
+
+  if (view === "history") {
+    return (
+      <PastSessions
+        onContinue={onContinue}
+        onBack={() => setView("select")}
+      />
+    );
+  }
 
   return (
     <div className="app">
@@ -239,7 +422,13 @@ function LandingPage({ onStart }: { onStart: (persona: string) => void }) {
         <div className="wordmark">VOXCAT</div>
         <div className="landing-header-right">
           <span>GEMINI LIVE · SMALLWEBRTC</span>
-          <span className="landing-header-link">PAST SESSIONS</span>
+          <span
+            className="landing-header-link"
+            onClick={() => setView("history")}
+          >
+            PAST SESSIONS
+          </span>
+          <ThemeToggle />
         </div>
       </div>
       <div className="landing-body">
@@ -293,21 +482,26 @@ export default function App() {
   const [session, setSession] = useState<{
     persona: string;
     outputDir: string;
+    context?: string;
   } | null>(null);
 
   if (session) {
     return (
-      <SessionPage persona={session.persona} outputDir={session.outputDir} />
+      <SessionPage
+        persona={session.persona}
+        outputDir={session.outputDir}
+        context={session.context}
+      />
     );
   }
 
   return (
     <LandingPage
       onStart={(p) =>
-        setSession({
-          persona: p,
-          outputDir: `output/${p}/`,
-        })
+        setSession({ persona: p, outputDir: `output/${p}/` })
+      }
+      onContinue={(p, ctx) =>
+        setSession({ persona: p, outputDir: `output/${p}/`, context: ctx })
       }
     />
   );
