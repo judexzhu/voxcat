@@ -42,10 +42,10 @@ Frontend connects via WebRTC. RTVI data channel carries transcripts and tool cal
 
 # Option A: install as a tool
 uv tool install git+https://github.com/judexzhu/voxcat
-mkdir my-workspace && cd my-workspace
-voxcat init              # creates config.yaml + .env
-# Edit .env: GOOGLE_API_KEY (required), TAVILY_API_KEY (optional)
+voxcat init              # creates ~/.config/voxcat/config.yaml + .env
+# Edit ~/.config/voxcat/.env: GOOGLE_API_KEY (required), TAVILY_API_KEY (optional)
 voxcat                   # start server on :7860
+# Output files go to ~/Documents/voxcat/
 
 # Option B: clone and run
 git clone https://github.com/judexzhu/voxcat && cd voxcat

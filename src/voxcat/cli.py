@@ -1,12 +1,14 @@
 import argparse
 import os
-import shutil
 import sys
 from importlib import resources
 from pathlib import Path
 
 from dotenv import load_dotenv
 from loguru import logger
+
+CONFIG_DIR = Path.home() / ".config" / "voxcat"
+DATA_DIR = Path.home() / "Documents" / "voxcat"
 
 
 def get_client_dist() -> Path | None:
@@ -22,28 +24,28 @@ def get_client_dist() -> Path | None:
     return None
 
 
-def init_project(target: Path):
-    """Copy default config and .env templates to target directory."""
+def init_project():
+    """Create ~/.config/voxcat/ and ~/Documents/voxcat/ with defaults."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
     pkg = resources.files("voxcat")
-    for name in ("config.yaml.example", ".env.example"):
-        src = pkg / name
-        dest_name = name.replace(".example", "") if name != "config.yaml.example" else name
-        dest = target / dest_name
-        if name == "config.yaml.example":
-            dest = target / "config.yaml"
-            if dest.exists():
-                print(f"  skip {dest} (already exists)")
-                continue
-            dest.write_text(src.read_text())
-            print(f"  created {dest}")
-        else:
-            dest = target / ".env"
-            if dest.exists():
-                print(f"  skip {dest} (already exists)")
-                continue
-            dest.write_text(src.read_text())
-            print(f"  created {dest}")
-    print("\nEdit .env with your API keys, then run: voxcat")
+
+    config_dest = CONFIG_DIR / "config.yaml"
+    if config_dest.exists():
+        print(f"  skip {config_dest} (already exists)")
+    else:
+        config_dest.write_text((pkg / "config.yaml.example").read_text())
+        print(f"  created {config_dest}")
+
+    env_dest = CONFIG_DIR / ".env"
+    if env_dest.exists():
+        print(f"  skip {env_dest} (already exists)")
+    else:
+        env_dest.write_text((pkg / ".env.example").read_text())
+        print(f"  created {env_dest}")
+
+    print(f"\nEdit {env_dest} with your API keys, then run: voxcat")
 
 
 def main():
@@ -51,27 +53,37 @@ def main():
     parser.add_argument("--config", type=Path, default=None, help="Path to config.yaml")
     parser.add_argument("--port", type=int, default=None, help="Server port (overrides config)")
     sub = parser.add_subparsers(dest="command")
-    sub.add_parser("init", help="Create config.yaml and .env in the current directory")
+    sub.add_parser("init", help="Create config and env in ~/.config/voxcat/")
     args = parser.parse_args()
 
     if args.command == "init":
-        init_project(Path.cwd())
+        init_project()
         return
 
+    env_path = CONFIG_DIR / ".env"
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
     load_dotenv(override=True)
 
     from .bot import load_config
     from .filestore import safe_resolve
-    from .transcript import SESSIONS_DIR
+    from . import transcript
 
     # pipecat runner discovers bot() via sys.modules["__main__"]
-    import sys
     from .bot import bot as _bot_func
     sys.modules["__main__"].bot = _bot_func
 
-    config_path = args.config or Path.cwd() / "config.yaml"
-    if not config_path.exists():
-        print(f"Config not found: {config_path}")
+    config_path = args.config
+    if not config_path:
+        if (CONFIG_DIR / "config.yaml").exists():
+            config_path = CONFIG_DIR / "config.yaml"
+        elif (Path.cwd() / "config.yaml").exists():
+            config_path = Path.cwd() / "config.yaml"
+
+    if not config_path or not config_path.exists():
+        print(f"Config not found. Checked:")
+        print(f"  {CONFIG_DIR / 'config.yaml'}")
+        print(f"  {Path.cwd() / 'config.yaml'}")
         print("Run 'voxcat init' to create one, or use --config path/to/config.yaml")
         sys.exit(1)
 
@@ -80,6 +92,15 @@ def main():
 
     if args.port:
         config.setdefault("server", {})["port"] = args.port
+
+    # Resolve output dirs: make relative paths relative to DATA_DIR
+    for name, profile in config["persona"]["profiles"].items():
+        output_dir = profile.get("output", {}).get("directory", f"output/{name}")
+        if not Path(output_dir).is_absolute():
+            profile.setdefault("output", {})["directory"] = str(DATA_DIR / output_dir)
+
+    # Sessions dir under DATA_DIR
+    transcript.SESSIONS_DIR = DATA_DIR / "sessions"
 
     from fastapi.staticfiles import StaticFiles
     from pipecat.runner.run import app, main as pipecat_main
@@ -155,11 +176,13 @@ def main():
         path.rename(new_path)
         return {"filename": new_name}
 
+    sessions_dir = transcript.SESSIONS_DIR
+
     @app.get("/api/sessions")
     async def list_sessions():
         sessions = []
-        if SESSIONS_DIR.is_dir():
-            for persona_dir in sorted(SESSIONS_DIR.iterdir()):
+        if sessions_dir.is_dir():
+            for persona_dir in sorted(sessions_dir.iterdir()):
                 if not persona_dir.is_dir():
                     continue
                 files = sorted(persona_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
@@ -174,14 +197,14 @@ def main():
 
     @app.get("/api/sessions/{persona}/{filename}")
     async def read_session(persona: str, filename: str):
-        path = safe_resolve(SESSIONS_DIR / persona, filename)
+        path = safe_resolve(sessions_dir / persona, filename)
         if not path or not path.exists():
             return {"error": "Session not found"}
         return {"content": path.read_text()[:20000], "persona": persona, "filename": filename}
 
     @app.delete("/api/sessions/{persona}/{filename}")
     async def delete_session(persona: str, filename: str):
-        path = safe_resolve(SESSIONS_DIR / persona, filename)
+        path = safe_resolve(sessions_dir / persona, filename)
         if not path or not path.exists():
             return {"error": "Session not found"}
         path.unlink()
@@ -189,12 +212,12 @@ def main():
 
     @app.post("/api/sessions/{persona}/{filename}/rename")
     async def rename_session(persona: str, filename: str, new_name: str):
-        path = safe_resolve(SESSIONS_DIR / persona, filename)
+        path = safe_resolve(sessions_dir / persona, filename)
         if not path or not path.exists():
             return {"error": "Session not found"}
         if not new_name.endswith(".md"):
             new_name += ".md"
-        new_path = safe_resolve(SESSIONS_DIR / persona, new_name)
+        new_path = safe_resolve(sessions_dir / persona, new_name)
         if not new_path:
             return {"error": "Invalid name"}
         path.rename(new_path)
