@@ -5,6 +5,7 @@ import type { ActivityEntry } from "../types";
 
 export function useActivityLog() {
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
+  const [speaking, setSpeaking] = useState(false);
   const add = useCallback(
     (entry: ActivityEntry) => setEntries((prev) => [...prev, entry]),
     [],
@@ -20,6 +21,7 @@ export function useActivityLog() {
   });
 
   useRTVIClientEvent(RTVIEvent.BotTtsText, (data: any) => {
+    setSpeaking(true);
     setEntries((prev) => {
       if (botIndex.current >= 0 && botIndex.current < prev.length) {
         const updated = [...prev];
@@ -39,6 +41,7 @@ export function useActivityLog() {
 
   useRTVIClientEvent(RTVIEvent.BotStoppedSpeaking, () => {
     botIndex.current = -1;
+    setSpeaking(false);
   });
 
   useRTVIClientEvent(RTVIEvent.LLMFunctionCallStarted, (data: any) => {
@@ -67,5 +70,5 @@ export function useActivityLog() {
     botIndex.current = -1;
   }, []);
 
-  return { entries, clear };
+  return { entries, speaking, clear };
 }

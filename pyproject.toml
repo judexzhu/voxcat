@@ -9,8 +9,8 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.141.1",
-    "notebooklm-py>=0.8.1",
-"pipecat-ai[google,mcp,silero,webrtc]>=1.8.0",
+    "notebooklm-py[markdown]>=0.8.1",
+    "pipecat-ai[google,mcp,silero,webrtc]>=1.8.0",
     "python-dotenv>=1.2.3",
     "pyyaml>=6.0.3",
     "tavily-python>=0.5.0",

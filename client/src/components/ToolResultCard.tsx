@@ -4,39 +4,202 @@ interface Props {
   functionName: string;
   result: unknown;
   cancelled: boolean;
+  latencyMs?: number;
+  onFileClick?: (filename: string) => void;
 }
 
-function resultToMarkdown(functionName: string, result: unknown): string {
-  if (typeof result === "string") return result;
+type ResultKind = "results" | "prose" | "status" | "raw";
+
+function classify(result: unknown, cancelled: boolean): ResultKind {
+  if (cancelled) return "status";
   if (result && typeof result === "object") {
     const obj = result as Record<string, unknown>;
-    if (obj.analysis) return String(obj.analysis);
-    if (obj.report) return String(obj.report);
-    if (obj.content) return String(obj.content);
-    if (obj.results && Array.isArray(obj.results)) {
-      return obj.results
-        .map((r: any) => `- **${r.title || r.name || ""}**: ${r.content || r.url || JSON.stringify(r)}`)
-        .join("\n");
-    }
-    if (obj.status) return `**${obj.status}**: ${obj.message || obj.path || obj.title || ""}`;
-    if (obj.error) return `**Error**: ${obj.error}`;
+    if (obj.error) return "status";
+    if (obj.status) return "status";
+    if (Array.isArray(obj.results)) return "results";
+    if (Array.isArray(obj.files)) return "results";
+    if (obj.analysis || obj.report || obj.content) return "prose";
   }
-  return "```json\n" + JSON.stringify(result, null, 2) + "\n```";
+  return "raw";
 }
 
-export function ToolResultCard({ functionName, result, cancelled }: Props) {
-  if (cancelled) {
-    return <div className="tool-result cancelled">{functionName} cancelled</div>;
-  }
+function formatLatency(ms?: number): string {
+  if (!ms) return "";
+  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
 
-  const md = resultToMarkdown(functionName, result);
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+function ResultsList({
+  result,
+  onFileClick,
+}: {
+  result: Record<string, unknown>;
+  onFileClick?: (filename: string) => void;
+}) {
+  const items = (result.results || result.files) as Array<Record<string, unknown>>;
+  const isFiles = Array.isArray(result.files);
 
   return (
-    <div className="tool-result">
-      <div className="tool-name">{functionName}</div>
-      <div className="tool-content">
-        <Markdown>{md}</Markdown>
+    <div className="tool-result-body">
+      {items.map((r, i) => (
+        <div key={i} className="tool-result-item">
+          <div
+            className={`tool-result-title ${isFiles && onFileClick ? "tool-subject-link" : ""}`}
+            onClick={isFiles && onFileClick ? () => onFileClick(String(r.name)) : undefined}
+          >
+            {String(r.title || r.name || "")}
+          </div>
+          {!isFiles && r.content != null && (
+            <div className="tool-result-snippet">
+              {String(r.content).slice(0, 200)}
+            </div>
+          )}
+          {r.url != null && (
+            <a
+              className="tool-result-source"
+              href={String(r.url)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {String(r.url)}
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProseResult({ result }: { result: Record<string, unknown> }) {
+  const text = String(result.analysis || result.report || result.content || "");
+  return (
+    <div className="tool-result-prose">
+      <Markdown>{text}</Markdown>
+    </div>
+  );
+}
+
+function StatusResult({
+  functionName,
+  result,
+  cancelled,
+  onFileClick,
+}: {
+  functionName: string;
+  result: unknown;
+  cancelled: boolean;
+  onFileClick?: (filename: string) => void;
+}) {
+  if (cancelled) {
+    return (
+      <div className="tool-header">
+        <div className="tool-dot-outlined" />
+        <span className="tool-name-cancelled">{functionName.toUpperCase()}</span>
+        <span className="tool-status-chip tool-status-cancelled">CANCELLED</span>
       </div>
+    );
+  }
+
+  const obj = (result as Record<string, unknown>) || {};
+  const isError = !!obj.error;
+  const subject = String(obj.error || obj.path || obj.message || obj.title || "");
+  const isFile = !isError && obj.path && onFileClick;
+  const filename = obj.path ? String(obj.path).split("/").pop() || "" : "";
+
+  return (
+    <div className="tool-header">
+      <div className={isError ? "tool-dot-danger" : "tool-dot"} />
+      <span className={isError ? "tool-name-danger" : "tool-name"}>
+        {functionName.toUpperCase()}
+      </span>
+      {subject && (
+        <span
+          className={`tool-subject ${isFile ? "tool-subject-link" : ""}`}
+          onClick={isFile ? () => onFileClick(filename) : undefined}
+        >
+          {subject}
+        </span>
+      )}
+      <span
+        className={`tool-status-chip ${isError ? "tool-status-denied" : "tool-status-ok"}`}
+      >
+        {isError ? "DENIED" : "OK"}
+      </span>
+    </div>
+  );
+}
+
+function RawResult({ result, functionName }: { result: unknown; functionName: string }) {
+  const json = JSON.stringify(result, null, 2);
+  return (
+    <div>
+      <div className="tool-header">
+        <div className="tool-dot" />
+        <span className="tool-name">{functionName.toUpperCase()}</span>
+        <button
+          className="tool-result-copy"
+          onClick={() => navigator.clipboard.writeText(json)}
+        >
+          COPY
+        </button>
+      </div>
+      <div className="tool-result-raw vx-scroll" style={{ marginTop: 8 }}>
+        {json}
+      </div>
+    </div>
+  );
+}
+
+export function ToolResultCard({
+  functionName,
+  result,
+  cancelled,
+  latencyMs,
+  onFileClick,
+}: Props) {
+  const kind = classify(result, cancelled);
+
+  if (kind === "status") {
+    return (
+      <StatusResult
+        functionName={functionName}
+        result={result}
+        cancelled={cancelled}
+        onFileClick={onFileClick}
+      />
+    );
+  }
+
+  const obj = result as Record<string, unknown>;
+  const meta: string[] = [];
+  if (latencyMs) meta.push(formatLatency(latencyMs));
+  if (kind === "results") {
+    const items = (obj.results || obj.files) as unknown[];
+    if (Array.isArray(items)) {
+      meta.push(
+        Array.isArray(obj.files)
+          ? `${items.length} FILES`
+          : `${items.length} RESULTS`,
+      );
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="tool-header">
+        <div className="tool-dot" />
+        <span className="tool-name">{functionName.toUpperCase()}</span>
+        {meta.length > 0 && (
+          <span className="tool-meta">{meta.join(" · ")}</span>
+        )}
+      </div>
+      {kind === "results" && <ResultsList result={obj} onFileClick={onFileClick} />}
+      {kind === "prose" && <ProseResult result={obj} />}
+      {kind === "raw" && <RawResult result={result} functionName={functionName} />}
     </div>
   );
 }

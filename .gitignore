@@ -5,3 +5,4 @@ __pycache__/
 output/
 client/node_modules/
 client/dist/
+*.tsbuildinfo
