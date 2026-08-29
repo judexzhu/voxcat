@@ -909,6 +909,18 @@ body {
   margin: 0;
 }
 
+.rename-input {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  padding: 4px 8px;
+  outline: none;
+  min-width: 200px;
+}
+
 .doc-empty {
   flex: 1;
   display: flex;

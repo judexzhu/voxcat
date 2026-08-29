@@ -20,8 +20,7 @@ export function useActivityLog() {
     }
   });
 
-  useRTVIClientEvent(RTVIEvent.BotTtsText, (data: any) => {
-    setSpeaking(true);
+  const appendBotText = useCallback((text: string) => {
     setEntries((prev) => {
       if (botIndex.current >= 0 && botIndex.current < prev.length) {
         const updated = [...prev];
@@ -29,14 +28,22 @@ export function useActivityLog() {
         if (existing.kind === "bot") {
           updated[botIndex.current] = {
             ...existing,
-            text: existing.text + data.text,
+            text: existing.text + text,
           };
           return updated;
         }
       }
       botIndex.current = prev.length;
-      return [...prev, { kind: "bot", text: data.text, timestamp: Date.now() }];
+      return [...prev, { kind: "bot", text, timestamp: Date.now() }];
     });
+  }, []);
+
+  useRTVIClientEvent(RTVIEvent.BotLlmText, (data: any) => {
+    appendBotText(data.text);
+  });
+
+  useRTVIClientEvent(RTVIEvent.BotTtsText, (data: any) => {
+    setSpeaking(true);
   });
 
   useRTVIClientEvent(RTVIEvent.BotStoppedSpeaking, () => {

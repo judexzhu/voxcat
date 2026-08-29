@@ -23,12 +23,35 @@ from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 from pipecat.workers.runner import WorkerRunner
 
+from pipecat.frames.frames import TextFrame
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+
 from filestore import safe_resolve
 from mcp_connect import connect_mcp_servers
 from tools import build_tools
 from transcript import TranscriptRecorder
 
 load_dotenv(override=True)
+
+
+class TTSPaceProcessor(FrameProcessor):
+    """Prepends a pace tag like [fast] to text frames heading to TTS."""
+
+    def __init__(self, pace: str = "fast"):
+        super().__init__()
+        self._tag = f"[{pace}] "
+        self._first = True
+
+    async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
+        if isinstance(frame, TextFrame) and direction == FrameDirection.DOWNSTREAM:
+            if self._first:
+                frame.text = self._tag + frame.text
+                self._first = False
+            # Reset on empty text (sentence boundary)
+            if not frame.text.strip():
+                self._first = True
+        await self.push_frame(frame, direction)
 
 
 def load_config():
@@ -48,8 +71,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     persona = config["persona"]["profiles"][persona_name]
     common = config["persona"].get("common_instruction", "")
     system_instruction = persona["instruction"] + "\n" + common if common else persona["instruction"]
-    voice = config["voice"]["name"]
-    live_model = config["voice"].get("model")
+    voice_config = config["voice"]
+    voice = voice_config["name"]
+    voice_mode = voice_config.get("mode", "live")
     output_dir = persona.get("output", {}).get("directory", "brainstorms")
     builtin_tools = persona.get("tools", {}).get("builtin", [])
     mcp_server_names = persona.get("tools", {}).get("mcp_servers", [])
@@ -63,27 +87,66 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         mcp_tools, mcp_clients = await connect_mcp_servers(mcp_server_names, mcp_config)
         tools.extend(mcp_tools)
 
-    logger.info(f"Persona: {persona_name} | Tools: {len(tools)} | Output: {output_dir}")
-
-    llm = GeminiLiveLLMService(
-        api_key=os.environ["GOOGLE_API_KEY"],
-        model=live_model,
-        settings=GeminiLiveLLMService.Settings(
-            system_instruction=system_instruction,
-            voice=voice,
-        ),
-    )
+    logger.info(f"Persona: {persona_name} | Mode: {voice_mode} | Tools: {len(tools)} | Output: {output_dir}")
 
     context = LLMContext(tools=tools)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
 
-    pipeline = Pipeline([
-        transport.input(),
-        user_aggregator,
-        llm,
-        transport.output(),
-        assistant_aggregator,
-    ])
+    if voice_mode == "split":
+        from pipecat.services.google.gemini_live.stt import GeminiSTTService
+        from pipecat.services.google.llm import GoogleLLMService
+        from pipecat.services.google.tts import GeminiTTSService
+
+        split_config = voice_config.get("split", {})
+        api_key = os.environ["GOOGLE_API_KEY"]
+
+        stt = GeminiSTTService(
+            api_key=api_key,
+            model=split_config.get("stt_model", "gemini-3.5-transcribe-live"),
+        )
+        llm = GoogleLLMService(
+            api_key=api_key,
+            model=split_config.get("llm_model", "gemini-3.7-flash"),
+            settings=GoogleLLMService.Settings(
+                system_instruction=system_instruction,
+            ),
+        )
+        tts = GeminiTTSService(
+            api_key=api_key,
+            model=split_config.get("tts_model", "gemini-3.1-flash-tts-preview"),
+            voice_id=split_config.get("tts_voice", voice),
+        )
+
+        tts_pace = split_config.get("tts_pace", "fast")
+        pace_proc = TTSPaceProcessor(tts_pace) if tts_pace else None
+
+        pipeline = Pipeline([
+            transport.input(),
+            stt,
+            user_aggregator,
+            llm,
+            *([pace_proc] if pace_proc else []),
+            tts,
+            transport.output(),
+            assistant_aggregator,
+        ])
+    else:
+        llm = GeminiLiveLLMService(
+            api_key=os.environ["GOOGLE_API_KEY"],
+            model=voice_config.get("live_model"),
+            settings=GeminiLiveLLMService.Settings(
+                system_instruction=system_instruction,
+                voice=voice,
+            ),
+        )
+
+        pipeline = Pipeline([
+            transport.input(),
+            user_aggregator,
+            llm,
+            transport.output(),
+            assistant_aggregator,
+        ])
 
     worker = PipelineWorker(
         pipeline,
@@ -222,6 +285,31 @@ if __name__ == "__main__":
             return {"error": "File not found"}
         return {"filename": filename, "content": path.read_text()[:10000]}
 
+    @app.delete("/api/files/{filename:path}")
+    async def delete_file(filename: str, persona: str = "thinking-partner"):
+        profile = config["persona"]["profiles"].get(persona, {})
+        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
+        path = safe_resolve(output_dir, filename)
+        if not path or not path.exists():
+            return {"error": "File not found"}
+        path.unlink()
+        return {"deleted": filename}
+
+    @app.post("/api/files/{filename:path}/rename")
+    async def rename_file(filename: str, new_name: str, persona: str = "thinking-partner"):
+        profile = config["persona"]["profiles"].get(persona, {})
+        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
+        path = safe_resolve(output_dir, filename)
+        if not path or not path.exists():
+            return {"error": "File not found"}
+        if not new_name.endswith(".md") and not new_name.endswith(".txt"):
+            new_name += ".md"
+        new_path = safe_resolve(output_dir, new_name)
+        if not new_path:
+            return {"error": "Invalid name"}
+        path.rename(new_path)
+        return {"filename": new_name}
+
     from transcript import SESSIONS_DIR
 
     @app.get("/api/sessions")
@@ -247,6 +335,14 @@ if __name__ == "__main__":
         if not path or not path.exists():
             return {"error": "Session not found"}
         return {"content": path.read_text()[:20000], "persona": persona, "filename": filename}
+
+    @app.delete("/api/sessions/{persona}/{filename}")
+    async def delete_session(persona: str, filename: str):
+        path = safe_resolve(SESSIONS_DIR / persona, filename)
+        if not path or not path.exists():
+            return {"error": "Session not found"}
+        path.unlink()
+        return {"deleted": filename}
 
     @app.post("/api/sessions/{persona}/{filename}/rename")
     async def rename_session(persona: str, filename: str, new_name: str):

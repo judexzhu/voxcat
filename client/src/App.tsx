@@ -151,6 +151,8 @@ function SessionView({
     filename: string;
   } | null>(null);
 
+  const [treeKey, setTreeKey] = useState(0);
+
   const { state: voiceState, toolName } = deriveVoiceState(
     entries,
     speaking,
@@ -249,6 +251,7 @@ function SessionView({
           <Separator className="grid-separator" />
           <Panel defaultSize={22} minSize={12} id="output">
             <OutputTree
+              key={treeKey}
               persona={persona}
               selected={selected}
               onSelect={(p, f) => setSelected({ persona: p, filename: f })}
@@ -256,7 +259,14 @@ function SessionView({
           </Panel>
           <Separator className="grid-separator" />
           <Panel defaultSize={40} minSize={20} id="document">
-            <FilePreview selected={selected} />
+            <FilePreview
+              selected={selected}
+              onSelect={(p, f) => {
+                if (p && f) setSelected({ persona: p, filename: f });
+                else setSelected(null);
+              }}
+              onDeleted={() => setTreeKey((k) => k + 1)}
+            />
           </Panel>
         </Group>
       </div>
@@ -318,6 +328,9 @@ function PastSessions({
     filename: string;
   } | null>(null);
   const [content, setContent] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameTo, setRenameTo] = useState("");
 
   useEffect(() => {
     fetch("/api/sessions")
@@ -383,31 +396,71 @@ function PastSessions({
             {selected ? (
               <div className="pane" style={{ height: "100%" }}>
                 <div className="pane-header pane-header-document">
-                  <span
-                    className="doc-header-name pane-meta-interactive"
-                    title="Click to rename"
-                    onClick={() => {
-                      const name = prompt("Rename session:", selected.filename.replace(".md", ""));
-                      if (!name) return;
-                      fetch(`/api/sessions/${selected.persona}/${selected.filename}/rename?new_name=${encodeURIComponent(name)}`, { method: "POST" })
-                        .then((r) => r.json())
-                        .then((d) => {
-                          if (d.filename) {
-                            setSelected({ persona: selected.persona, filename: d.filename });
-                            fetch("/api/sessions").then((r) => r.json()).then((d) => setSessions(d.sessions || []));
-                          }
-                        });
-                    }}
-                  >
-                    {selected.filename}
-                  </span>
-                  <button
-                    className="btn-primary"
-                    style={{ padding: "8px 16px", fontSize: "10px" }}
-                    onClick={() => onContinue(selected.persona, content, selected.filename)}
-                  >
-                    CONTINUE SESSION
-                  </button>
+                  {renaming ? (
+                    <input
+                      className="rename-input"
+                      autoFocus
+                      value={renameTo}
+                      onChange={(e) => setRenameTo(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && renameTo.trim()) {
+                          fetch(`/api/sessions/${selected.persona}/${selected.filename}/rename?new_name=${encodeURIComponent(renameTo.trim())}`, { method: "POST" })
+                            .then((r) => r.json())
+                            .then((d) => {
+                              setRenaming(false);
+                              if (d.filename) {
+                                setSelected({ persona: selected.persona, filename: d.filename });
+                                fetch("/api/sessions").then((r) => r.json()).then((d) => setSessions(d.sessions || []));
+                              }
+                            });
+                        }
+                        if (e.key === "Escape") setRenaming(false);
+                      }}
+                      onBlur={() => setRenaming(false)}
+                    />
+                  ) : (
+                    <span
+                      className="doc-header-name pane-meta-interactive"
+                      title="Click to rename"
+                      onClick={() => {
+                        setRenameTo(selected.filename.replace(".md", ""));
+                        setRenaming(true);
+                      }}
+                    >
+                      {selected.filename}
+                    </span>
+                  )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className="btn-rail end"
+                      onClick={() => {
+                        if (!confirmDelete) {
+                          setConfirmDelete(true);
+                          setTimeout(() => setConfirmDelete(false), 3000);
+                          return;
+                        }
+                        fetch(`/api/sessions/${selected.persona}/${selected.filename}`, { method: "DELETE" })
+                          .then((r) => r.json())
+                          .then((d) => {
+                            if (d.deleted) {
+                              setConfirmDelete(false);
+                              setSelected(null);
+                              setContent("");
+                              fetch("/api/sessions").then((r) => r.json()).then((d) => setSessions(d.sessions || []));
+                            }
+                          });
+                      }}
+                    >
+                      {confirmDelete ? "CONFIRM?" : "DELETE"}
+                    </button>
+                    <button
+                      className="btn-primary"
+                      style={{ padding: "8px 16px", fontSize: "10px" }}
+                      onClick={() => onContinue(selected.persona, content, selected.filename)}
+                    >
+                      CONTINUE SESSION
+                    </button>
+                  </div>
                 </div>
                 <div className="doc-scroll vx-scroll">
                   <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>

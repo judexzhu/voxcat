@@ -2,7 +2,14 @@
 
 voice:
   name: "Aoede" # Options: Puck, Charon, Kore, Fenrir, Aoede
-  model: "gemini-3.1-flash-live-preview"
+  mode: "split" # "live" = all-in-one Gemini Live, "split" = separate STT + LLM + TTS
+  live_model: "gemini-3.1-flash-live-preview"
+  split:
+    stt_model: "gemini-3.5-transcribe-live"
+    llm_model: "gemini-3.6-flash"
+    tts_model: "gemini-3.1-flash-tts-preview"
+    tts_voice: "Kore"
+    tts_pace: "fast" # Options: slow, fast, or remove for default pace
 
 mcp_servers:
   redhat:
