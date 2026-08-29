@@ -18,6 +18,12 @@ else
     echo "Using pre-built frontend (client/dist/)"
 fi
 
+# Copy client/dist into package for `uv run voxcat` to find it
+if [ -d client/dist ]; then
+    mkdir -p src/voxcat/client
+    cp -r client/dist src/voxcat/client/dist
+fi
+
 # Configuration files
 if [ ! -f config.yaml ]; then
     cp config.yaml.example config.yaml
@@ -36,5 +42,5 @@ fi
 echo ""
 echo "=== Setup complete ==="
 echo ""
-echo "Run:  uv run python bot.py"
+echo "Run:  uv run voxcat"
 echo "Open: http://localhost:7860"
