@@ -27,6 +27,7 @@ export function OutputTree({ persona, selected, onSelect }: Props) {
   const [tree, setTree] = useState<FolderNode[]>([]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [nlmSources, setNlmSources] = useState<NlmSource[]>([]);
+  const [nlmTitle, setNlmTitle] = useState("NOTEBOOKLM");
 
   const toggle = (key: string) => {
     setCollapsed((prev) => {
@@ -43,7 +44,10 @@ export function OutputTree({ persona, selected, onSelect }: Props) {
       .then((d) => setTree(d.tree || []));
     fetch("/api/notebooklm/sources")
       .then((r) => r.json())
-      .then((d) => setNlmSources(d.sources || []))
+      .then((d) => {
+        setNlmSources(d.sources || []);
+        if (d.notebook_title) setNlmTitle(d.notebook_title);
+      })
       .catch(() => setNlmSources([]));
   }, []);
 
@@ -115,7 +119,7 @@ export function OutputTree({ persona, selected, onSelect }: Props) {
                 <span className="output-chevron">
                   {collapsed.has("__nlm__") ? "▸" : "▾"}
                 </span>
-                NOTEBOOKLM
+                {nlmTitle.toUpperCase()}
               </span>
               <span className="output-group-count">{nlmSources.length}</span>
             </div>

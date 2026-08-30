@@ -248,8 +248,9 @@ def main():
         try:
             from notebooklm import NotebookLMClient
             async with NotebookLMClient.from_storage() as client:
+                meta = await client.notebooks.get_metadata(notebook_id)
                 sources = await client.sources.list(notebook_id)
-                return {"sources": [
+                return {"notebook_title": meta.title, "sources": [
                     {"id": s.id, "title": s.title}
                     for s in sources
                 ]}
