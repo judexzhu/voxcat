@@ -165,9 +165,9 @@ function SessionView({
     currentVoiceState === "listening" || currentVoiceState === "speaking";
   const audioLevels = useAudioLevel(micActive);
 
-  // Auto-refresh output tree when file_write completes
+  // Auto-refresh output tree when a tool writes a file
   const fileWriteCount = entries.filter(
-    (e) => e.kind === "tool-result" && e.functionName === "file_write" && !e.cancelled,
+    (e) => e.kind === "tool-result" && (e.functionName === "file_write" || e.functionName === "summarize_session") && !e.cancelled,
   ).length;
   useEffect(() => {
     if (fileWriteCount > 0) setTreeKey((k) => k + 1);
