@@ -1,5 +1,4 @@
 import os
-import signal
 from pathlib import Path
 
 import yaml
@@ -260,12 +259,6 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         recorder.add_turn("assistant", message.content, message.timestamp)
         timestamp = f"[{message.timestamp}] " if message.timestamp else ""
         logger.info(f"Transcript: {timestamp}assistant: {message.content}")
-
-    def handle_shutdown(signum, frame):
-        filepath = recorder.save_transcript()
-        logger.info(f"Transcript saved to {filepath}")
-
-    signal.signal(signal.SIGINT, handle_shutdown)
 
     await runner.run()
 
