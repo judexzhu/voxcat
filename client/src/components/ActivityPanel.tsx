@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 import type { ActivityEntry } from "../types";
 import { ToolResultCard } from "./ToolResultCard";
 
@@ -95,7 +96,7 @@ export function ActivityPanel({ entries, speaking, onFileClick }: Props) {
                   <div className="timeline-speaker timeline-speaker-bot">
                     VOXCAT
                   </div>
-                  <div className="timeline-utterance">{entry.text}</div>
+                  <div className="timeline-utterance"><Markdown>{entry.text}</Markdown></div>
                   {streaming && (
                     <div className="timeline-speaking">
                       <div className="timeline-speaking-track">

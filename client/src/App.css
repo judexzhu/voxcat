@@ -587,6 +587,12 @@ body {
   color: var(--text);
 }
 
+.timeline-utterance p { margin: 0; }
+.timeline-utterance strong { color: var(--text-strong); }
+.timeline-utterance code { font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: var(--accent-text); }
+.timeline-utterance ul, .timeline-utterance ol { margin: 4px 0; padding-left: 18px; }
+.timeline-utterance li { font-size: 15px; }
+
 .timeline-speaking {
   display: flex;
   align-items: center;
