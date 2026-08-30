@@ -52,6 +52,7 @@ def main():
     parser = argparse.ArgumentParser(description="Voxcat — voice AI agent with swappable personas")
     parser.add_argument("--config", type=Path, default=None, help="Path to config.yaml")
     parser.add_argument("--port", type=int, default=None, help="Server port (overrides config)")
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Log level (default: INFO)")
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("init", help="Create config and env in ~/.config/voxcat/")
     args = parser.parse_args()
@@ -59,6 +60,18 @@ def main():
     if args.command == "init":
         init_project()
         return
+
+    # Logging: file + stdout
+    log_dir = DATA_DIR / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    logger.add(
+        log_dir / "voxcat_{time:YYYY-MM-DD}.log",
+        rotation="1 day",
+        retention="7 days",
+        level=args.log_level,
+        format="{time:HH:mm:ss.SSS} | {level:<7} | {name}:{function}:{line} | {message}",
+    )
+    logger.info(f"Logs: {log_dir}")
 
     env_path = CONFIG_DIR / ".env"
     if env_path.exists():
