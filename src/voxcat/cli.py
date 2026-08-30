@@ -61,6 +61,13 @@ def main():
         init_project()
         return
 
+    # Suppress pipecat's "prebuilt frontend not available" — we serve our own UI
+    def _not_prebuilt(record):
+        return "pipecat_ai_prebuilt" not in record["message"]
+
+    logger.remove()
+    logger.add(sys.stderr, filter=_not_prebuilt)
+
     # Logging: file + stdout
     log_dir = DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -70,6 +77,7 @@ def main():
         retention="7 days",
         level=args.log_level,
         format="{time:HH:mm:ss.SSS} | {level:<7} | {name}:{function}:{line} | {message}",
+        filter=_not_prebuilt,
     )
     logger.info(f"Logs: {log_dir}")
 
