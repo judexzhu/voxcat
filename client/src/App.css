@@ -580,10 +580,10 @@ body {
 .timeline-speaker-bot { color: var(--accent-text); }
 
 .timeline-utterance {
-  font-family: 'Newsreader', serif;
-  font-size: 17px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 13px;
   font-weight: 400;
-  line-height: 1.55;
+  line-height: 1.7;
   color: var(--text);
 }
 
@@ -632,9 +632,9 @@ body {
 
 .timeline-utterance p { margin: 0; }
 .timeline-utterance strong { color: var(--text-strong); }
-.timeline-utterance code { font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: var(--accent-text); }
+.timeline-utterance code { font-size: 12px; color: var(--accent-text); }
 .timeline-utterance ul, .timeline-utterance ol { margin: 4px 0; padding-left: 18px; }
-.timeline-utterance li { font-size: 15px; }
+.timeline-utterance li { font-size: 13px; }
 
 .timeline-speaking {
   display: flex;
@@ -643,10 +643,10 @@ body {
 }
 
 .timeline-speaking-text {
-  font-family: 'Newsreader', serif;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
   font-style: italic;
-  font-size: 17px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.7;
   color: rgba(236,234,234,0.55);
 }
 
