@@ -4,11 +4,11 @@ A voice AI agent with swappable personas. Talk to it, it calls tools, writes fil
 
 Built on [Pipecat](https://github.com/pipecat-ai/pipecat) + Gemini Live + SmallWebRTC.
 
-![Architecture](docs/voxcat-architecture.visual-check.2048x1320.dark.png)
-
 ![Landing](docs/preview-landing.png)
 
 ![Session](docs/preview-session.png)
+
+![Architecture](docs/voxcat-architecture.visual-check.2048x1320.dark.png)
 
 ## What it does
 
@@ -124,7 +124,7 @@ client/src/
 ## Environment variables
 
 | Variable | Required | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `GOOGLE_API_KEY` | Yes | Gemini Live, Flash, TTS, Transcribe |
 | `TAVILY_API_KEY` | No | Web search + web read tools |
 | `NOTEBOOKLM_NOTEBOOK_ID` | No | Sync documents to NotebookLM |
