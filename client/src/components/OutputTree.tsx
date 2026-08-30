@@ -119,7 +119,7 @@ export function OutputTree({ persona, selected, onSelect }: Props) {
                 <span className="output-chevron">
                   {collapsed.has("__nlm__") ? "▸" : "▾"}
                 </span>
-                {nlmTitle.toUpperCase()}
+                {nlmTitle.toUpperCase()} <span style={{ color: "var(--text-5)", fontSize: "9px" }}>NLM</span>
               </span>
               <span className="output-group-count">{nlmSources.length}</span>
             </div>
