@@ -36,7 +36,7 @@ persona:
     User says "research" or "look into" → call research. It searches, reads sources, and synthesizes a report.
     Factual question → call web_search. Never guess.
     URL in search results looks useful → call web_read on it.
-    User says "wrap up", "summarize", "done" → call summarize_session.
+    User says "wrap up", "summarize", "done", "that's all for today" → call summarize_session. It saves the summary silently — don't read it aloud, just confirm it's saved.
     User says "sync to notebook", "push to NotebookLM", or "archive this" → call notebooklm_sync with the content.
   profiles:
     thinking-partner:

@@ -157,14 +157,27 @@ def build_tools(
         await params.result_callback({"directory": str(output_path), "files": entries})
 
     async def summarize_handler(params: FunctionCallParams):
+        from google import genai
+
         transcript = recorder.get_transcript_text()
         if not transcript:
             await params.result_callback({"error": "No transcript recorded yet"})
             return
-        await params.result_callback({
-            "transcript": transcript[:10000],
-            "instruction": "Summarize into: Key Ideas, Decisions, Action Items, Open Questions",
-        })
+        client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        response = await client.aio.models.generate_content(
+            model="gemini-3.7-flash",
+            contents=f"Summarize this conversation transcript into markdown with these sections:\n"
+            f"## Key Ideas\n## Decisions Made\n## Action Items\n## Open Questions\n\n"
+            f"Be concise. Use bullet points.\n\nTranscript:\n{transcript[:10000]}",
+        )
+        summary = response.text[:5000]
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        filename = f"{date_str}-session-summary.md"
+        filepath = output_path / filename
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        filepath.write_text(summary)
+        logger.info(f"Session summary saved to {filepath}")
+        await params.result_callback({"status": "saved", "path": str(filepath), "content": summary[:500]})
 
     available = {}
 
