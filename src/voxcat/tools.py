@@ -171,8 +171,8 @@ def build_tools(
             f"Be concise. Use bullet points.\n\nTranscript:\n{transcript[:10000]}",
         )
         summary = response.text[:5000]
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        filename = f"{date_str}-session-summary.md"
+        ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        filename = f"{ts}-session-summary.md"
         filepath = output_path / filename
         filepath.parent.mkdir(parents=True, exist_ok=True)
         filepath.write_text(summary)

@@ -25,9 +25,9 @@ class TranscriptRecorder:
         self._topic = topic
 
     def save_transcript(self) -> Path:
-        date_str = self._session_start.strftime("%Y-%m-%d")
+        ts = self._session_start.strftime("%Y-%m-%d_%H%M%S")
         slug = self._topic.lower().replace(" ", "-")[:40]
-        filename = f"{date_str}-{slug}.md"
+        filename = f"{ts}-{slug}.md"
         filepath = self._output_dir / filename
 
         duration = datetime.now() - self._session_start
@@ -35,7 +35,7 @@ class TranscriptRecorder:
 
         lines = [
             f"# Brainstorm: {self._topic}",
-            f"**Date:** {date_str}  |  **Duration:** {minutes}m",
+            f"**Date:** {self._session_start.strftime('%Y-%m-%d %H:%M')}  |  **Duration:** {minutes}m",
             "",
             "## Key Ideas",
             "- *(review transcript below and fill in)*",
