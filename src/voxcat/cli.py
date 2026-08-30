@@ -7,6 +7,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 from loguru import logger
 
+# Suppress pipecat's "prebuilt frontend not available" — we serve our own UI
+def _not_prebuilt(record):
+    return "pipecat_ai_prebuilt" not in record["message"]
+
+logger.remove()
+logger.add(sys.stderr, filter=_not_prebuilt)
+
 CONFIG_DIR = Path.home() / ".config" / "voxcat"
 DATA_DIR = Path.home() / "Documents" / "voxcat"
 
@@ -61,14 +68,7 @@ def main():
         init_project()
         return
 
-    # Suppress pipecat's "prebuilt frontend not available" — we serve our own UI
-    def _not_prebuilt(record):
-        return "pipecat_ai_prebuilt" not in record["message"]
-
-    logger.remove()
-    logger.add(sys.stderr, filter=_not_prebuilt)
-
-    # Logging: file + stdout
+    # Logging: file
     log_dir = DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     logger.add(
