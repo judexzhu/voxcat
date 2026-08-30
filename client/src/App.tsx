@@ -3,6 +3,7 @@ import { PipecatAppBase } from "@pipecat-ai/voice-ui-kit";
 import type { PipecatBaseChildProps } from "@pipecat-ai/voice-ui-kit";
 import "@pipecat-ai/voice-ui-kit/styles.css";
 import {
+  usePipecatClient,
   usePipecatClientMicControl,
   usePipecatClientTransportState,
 } from "@pipecat-ai/client-react";
@@ -128,6 +129,7 @@ function SessionView({
   outputDir: string;
 }) {
   const { entries, speaking } = useActivityLog();
+  const client = usePipecatClient();
   const { enableMic, isMicEnabled } = usePipecatClientMicControl();
   const [muted, setMuted] = useState(false);
   const [unmuting, setUnmuting] = useState(false);
@@ -254,6 +256,7 @@ function SessionView({
           onFileClick={(filename) =>
             setSelected({ persona, filename })
           }
+          onSendText={(text) => client?.sendText(text)}
         />
           </Panel>
           <Separator className="grid-separator" />

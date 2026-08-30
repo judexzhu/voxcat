@@ -7,6 +7,7 @@ interface Props {
   entries: ActivityEntry[];
   speaking: boolean;
   onFileClick?: (filename: string) => void;
+  onSendText?: (text: string) => void;
 }
 
 function formatTime(ts: number): string {
@@ -29,10 +30,11 @@ function findLatency(
   return undefined;
 }
 
-export function ActivityPanel({ entries, speaking, onFileClick }: Props) {
+export function ActivityPanel({ entries, speaking, onFileClick, onSendText }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
   const [toolsOnly, setToolsOnly] = useState(false);
+  const [textInput, setTextInput] = useState("");
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -145,6 +147,23 @@ export function ActivityPanel({ entries, speaking, onFileClick }: Props) {
           return null;
         })}
       </div>
+      {onSendText && (
+        <div className="timeline-input">
+          <input
+            type="text"
+            className="timeline-input-field"
+            placeholder="Type a message..."
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && textInput.trim()) {
+                onSendText(textInput.trim());
+                setTextInput("");
+              }
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
