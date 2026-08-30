@@ -128,7 +128,7 @@ function SessionView({
   persona: string;
   outputDir: string;
 }) {
-  const { entries, speaking } = useActivityLog();
+  const { entries, speaking, add } = useActivityLog();
   const client = usePipecatClient();
   const { enableMic, isMicEnabled } = usePipecatClientMicControl();
   const [muted, setMuted] = useState(false);
@@ -256,7 +256,10 @@ function SessionView({
           onFileClick={(filename) =>
             setSelected({ persona, filename })
           }
-          onSendText={(text) => client?.sendText(text)}
+          onSendText={(text) => {
+            add({ kind: "user", text, timestamp: Date.now() });
+            client?.sendText(text);
+          }}
         />
           </Panel>
           <Separator className="grid-separator" />

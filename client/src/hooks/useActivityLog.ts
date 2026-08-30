@@ -77,5 +77,5 @@ export function useActivityLog() {
     botIndex.current = -1;
   }, []);
 
-  return { entries, speaking, clear };
+  return { entries, speaking, clear, add };
 }
