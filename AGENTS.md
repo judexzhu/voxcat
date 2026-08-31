@@ -49,7 +49,9 @@ RTVI observer reports tool calls to the frontend via WebRTC data channel.
 | `src/voxcat/tools.py` | 11 tool handlers + `build_tools()` registry |
 | `src/voxcat/transcript.py` | TranscriptRecorder (output + session files) |
 | `src/voxcat/mcp_connect.py` | MCP server connection with read-only filter |
+| `src/voxcat/personas.py` | Persona file loader (YAML frontmatter + markdown body) |
 | `src/voxcat/filestore.py` | `safe_resolve()` for path traversal prevention |
+| `src/voxcat/personas/` | Default persona files (copied to `~/.config/voxcat/personas/` by `voxcat init`) |
 | `src/voxcat/config.yaml.example` | Default config template |
 | `client/src/` | React frontend (Vite + TypeScript) |
 
@@ -89,6 +91,8 @@ Key test files:
 - `tests/test_filestore.py` — path traversal prevention (sibling prefix, absolute path)
 - `tests/test_build_tools.py` — tool registration, API key gating, full tool count
 - `tests/test_tts_pace.py` — TTS style tag prepending
+- `tests/test_personas.py` — persona file loading, config fallback, overrides, underscore skip
+- `tests/test_persona_behavior.py` — live API behavior tests (requires `GOOGLE_API_KEY`)
 
 ## Code Style
 

@@ -59,8 +59,9 @@ voxcat init
 ```
 
 This creates:
-- `~/.config/voxcat/config.yaml` — persona, voice, and server settings
+- `~/.config/voxcat/config.yaml` — voice, tools, MCP, and server settings
 - `~/.config/voxcat/.env` — API keys
+- `~/.config/voxcat/personas/` — 4 persona files (markdown with YAML frontmatter)
 
 ### Step 3: Configure API Keys
 
@@ -106,6 +107,7 @@ uv tool install --force git+https://github.com/judexzhu/voxcat
 | --- | --- |
 | `~/.config/voxcat/config.yaml` | Configuration |
 | `~/.config/voxcat/.env` | API keys |
+| `~/.config/voxcat/personas/` | Persona files (`.md`) |
 | `~/Documents/voxcat/output/` | Per-persona output files |
 | `~/Documents/voxcat/sessions/` | Session transcripts |
 | `~/Documents/voxcat/logs/` | Log files |
@@ -385,131 +387,117 @@ When the agent writes to the file you are currently viewing, the preview refresh
 
 ## 6. Personas
 
-A persona defines how the agent behaves during a session. Each persona has:
+A persona defines how the agent behaves during a session. Each persona is a markdown file in `~/.config/voxcat/personas/` with YAML frontmatter for settings and a markdown body for the system instruction.
 
-- **Instruction**: a system prompt that shapes the agent's personality and behavior
+Each persona controls:
+
+- **Instruction**: the markdown body — shapes personality and behavior
 - **Tool access**: which built-in tools and MCP servers the persona can use
+- **Voice identity**: per-persona voice and TTS style (falls back to `config.yaml` globals)
+- **Greeting**: exact first message spoken on connect
 - **Output directory**: where files created during the session are stored
 - **Silent mode** (optional): disables voice output, making the agent listen-only
 
+### Persona File Format
+
+```markdown
+---
+label: "Display Name"
+description: "One-line summary shown in persona selector."
+greeting: "What's on your mind?"
+voice:
+  tts_voice: "Aoede"
+  tts_style: "extremely fast"
+tools:
+  builtin:
+    - file_read
+    - file_write
+    - file_list
+    - set_topic
+    - summarize_session
+    - get_current_time
+  mcp_servers: []
+output:
+  directory: "output/my-persona"
+---
+
+You are a [role]. Under [N] words per response.
+
+[Behavioral instructions here...]
+```
+
+**Frontmatter fields:**
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `label` | Yes | Display name in UI |
+| `description` | No | One-line shown in persona selector |
+| `greeting` | No | Exact first message spoken on connect |
+| `silent` | No | `true` for listen-only personas. Skips greeting, auto-switches to split mode |
+| `voice.tts_voice` | No | Voice: `Aoede`, `Puck`, `Charon`, `Kore`, `Fenrir`. Falls back to `config.yaml` `split.tts_voice` |
+| `voice.tts_style` | No | Style: `extremely fast`, `whispering`, `shouting`, `sarcasm`, `robotic`. Falls back to `config.yaml` `split.tts_style` |
+| `tools.builtin` | Yes | List of enabled built-in tools |
+| `tools.mcp_servers` | No | MCP server names from `config.yaml` to connect |
+| `output.directory` | Yes | File output path relative to `~/Documents/voxcat/` |
+
 ### Common Instructions
 
-All personas share a set of **common instructions** that are appended to the persona-specific instruction. These handle universal behaviors:
+All personas automatically receive **common voice rules** prepended to their instruction. These handle:
 
-- Announce tool calls with a brief phrase before executing ("Let me check", "Looking that up")
-- Never call the same tool twice with the same arguments
-- Always speak tool results before calling another tool
-- Map natural language to tool calls:
-  - "Why" / "root cause" / "analyze" / "compare" triggers `deep_analysis`
-  - "Research" / "look into" triggers `research`
-  - Factual questions trigger `web_search`
-  - "Wrap up" / "summarize" / "done" triggers `summarize_session`
-  - "Sync to notebook" / "archive this" triggers `notebooklm_sync`
-  - Time questions trigger `get_current_time`
+- No markdown in speech (plain text only)
+- Speak numbers naturally ("twenty-three" not "23")
+- Handle barge-in gracefully (user interrupts mid-response)
+- Tool routing is embedded in each tool's description, not in the system prompt
 
 ### Thinking Partner (default)
 
-**Slug:** `thinking-partner`
+**File:** `thinking-partner.md` | **Voice:** Aoede, extremely fast
 
-A brainstorming partner. Responds in 2-3 sentences max. Asks clarifying questions. Challenges assumptions constructively. Suggests connections between ideas. When you seem stuck, offers a different angle.
+A brainstorming partner. Under 50 words per response. Asks probing questions, challenges assumptions, connects ideas. When you are stuck, offers a different angle.
 
-Has access to all 10 built-in tools. No MCP servers.
-
-**Output directory:** `output/thinking-partner/`
+Has access to all 11 built-in tools. No MCP servers.
 
 ### Devil's Advocate
 
-**Slug:** `devils-advocate`
+**File:** `devils-advocate.md` | **Voice:** Fenrir
 
-Takes the opposite side of whatever you say. Challenges every idea. Finds weaknesses. Pushes back hard but constructively. Always explains why something might be wrong. Never agrees just to be nice.
+Attacks ideas to find where they break. Under 30 words per turn. Each turn names a failure mode, asks a killing question, or concedes. Concedes when pressed twice with nothing structural. A conceded point stays conceded.
 
-Has access to all 10 built-in tools. No MCP servers.
-
-**Output directory:** `output/devils-advocate/`
+Has access to 9 built-in tools (no `research`, no `notebooklm_sync`). No MCP servers.
 
 ### Note Taker
 
-**Slug:** `note-taker`
+**File:** `note-taker.md` | **Silent mode**
 
-**Silent mode enabled.** This persona does not speak unless directly asked ("read back", "what do you have"). It listens to everything you say and organizes it into structured notes with bullet points grouped by topic.
+Does not speak unless directly asked ("read back", "what do you have"). Listens and organizes into structured bullet-point notes grouped by topic. Periodically saves notes using `file_write` without being asked.
 
-Key behaviors:
-- Does not respond to the user unless directly asked a question
-- Periodically saves notes using `file_write` without being asked (every 2-3 minutes or when a topic changes)
-- Flags ambiguity with inline markers like `(Ambiguity: unclear term)`
-- When asked to read back, speaks the organized notes
+Silent mode only works in **split voice mode**. If `voice.mode` is `"live"`, Voxcat auto-switches to split for this persona.
 
-Silent mode only works in **split voice mode**. In live mode, the model always generates audio output regardless of the persona instruction. If you use the Note Taker persona, make sure `voice.mode` is set to `"split"` in `config.yaml`.
-
-Has access to all 10 built-in tools. No MCP servers.
-
-**Output directory:** `output/note-taker/`
+Has access to 6 core tools (`file_read`, `file_write`, `file_list`, `set_topic`, `get_current_time`, `summarize_session`). No MCP servers.
 
 ### SRE Assistant
 
-**Slug:** `sre`
+**File:** `sre.md` | **Voice:** Charon
 
-A Platform SRE voice assistant. Extremely concise (1-2 sentences max). Evidence-first: never speculates. Names the tool it is calling before executing.
+Platform SRE voice assistant. Under 30 words per response. Evidence-first, never speculates. Names the tool before calling it.
 
-Understands domain-specific commands:
-- Mentioning a case number triggers `get_case`
-- "Search cases" or describing a problem triggers `search_cases` or `search_kcs`
-- Mentioning a Jira ticket triggers `jira_get_issue`
-- "Search Jira" triggers `jira_search_issues` with JQL
-- When saving, uses a structured case report format
+Researches problems, checks web sources, analyzes root cause. When MCP servers are configured (e.g. Red Hat API, Jira), uses them for case and ticket lookups.
 
-Has access to all 10 built-in tools plus the `redhat` and `jira` MCP servers.
-
-**Output directory:** `output/sre/`
+Has access to all 11 built-in tools. Ships with `mcp_servers: []` — add MCP servers in `config.yaml` and list them in the persona file to enable (see [MCP Integration](#11-mcp-integration)).
 
 ### Creating a Custom Persona
 
-Add a new entry under `persona.profiles` in `config.yaml`:
+Add a `.md` file to `~/.config/voxcat/personas/`. The filename becomes the slug (e.g. `my-coach.md` → persona `my-coach`). Files starting with `_` are skipped.
 
-```yaml
-persona:
-  profiles:
-    my-persona:
-      instruction: |
-        You are a [role]. [Behavioral instructions here.]
-        Keep responses [length guideline].
-      tools:
-        builtin:
-          - websearch
-          - web_read
-          - file_read
-          - file_write
-          - file_list
-          - summarize_session
-          - get_current_time
-          - deep_analysis
-          - research
-          - notebooklm_sync
-        mcp_servers: []
-      output:
-        directory: "output/my-persona"
-```
+Use the file format shown above. After creating the file, restart Voxcat. The persona automatically appears on the landing page.
 
-If you want a silent (listen-only) persona, add `silent: true` at the persona level:
-
-```yaml
-    my-listener:
-      silent: true
-      instruction: |
-        ...
-```
-
-After editing `config.yaml`, restart Voxcat for changes to take effect.
-
-The persona will automatically appear on the landing page. The `PersonaSelector` component reads persona names from the `/api/personas` endpoint, which returns whatever is configured in `config.yaml`.
-
-Display names and descriptions for custom personas default to the slug name. To add custom display names and descriptions, you would modify the `PERSONA_LABELS` and `PERSONA_DESCS` maps in `client/src/components/PersonaSelector.tsx`.
+**Fallback:** If no persona files exist, Voxcat falls back to `persona.profiles` in `config.yaml` for backward compatibility. When persona files exist, they take priority — a file and config entry with the same slug uses the file version.
 
 ---
 
 ## 7. Built-in Tools
 
-Voxcat has 10 built-in tools. Each persona can enable a subset of these in its `tools.builtin` list. If a required API key is missing, the tool is silently skipped during registration (a warning is logged to the terminal).
+Voxcat has 11 built-in tools. Each persona can enable a subset of these in its `tools.builtin` list. If a required API key is missing, the tool is silently skipped during registration (a warning is logged to the terminal).
 
 ### web_search
 
@@ -550,6 +538,12 @@ Writes content to a file in the current persona's output directory. Creates the 
 Lists all files in the current persona's output directory, sorted by modification time (newest first). Returns up to 20 files with name and size.
 
 **How to trigger:** "What files do I have?" or "List my files."
+
+### set_topic
+
+Sets the current session topic. The topic is used in output filenames (e.g., `2026-08-29-cloud-migration.md` instead of `2026-08-29-untitled.md`). The agent calls this automatically when a clear topic emerges in conversation.
+
+**How to trigger:** "Let's talk about [topic]" or "Set the topic to [topic]."
 
 ### deep_analysis
 
@@ -607,8 +601,9 @@ Voxcat supports two voice processing architectures. Set the mode in `config.yaml
 ```yaml
 voice:
   mode: "live"
-  name: "Aoede"
-  live_model: "gemini-3.1-flash-live-preview"
+  live:
+    model: "gemini-3.1-flash-live-preview"
+    voice: "Aoede"
 ```
 
 **Pipeline:**
@@ -623,10 +618,10 @@ A single Gemini Live model handles everything: speech recognition, reasoning, an
 - Lowest latency (~300ms speech-to-speech)
 - Natural conversational flow with interruption support
 - Less capable at complex tool calls and multi-step reasoning
-- Cannot be made silent (live mode always generates audio)
-- The voice is set by the `voice.name` field
+- Cannot be made silent (silent personas auto-switch to split mode)
+- The voice is set by `live.voice`
 
-**Available voices for live mode:** Puck, Charon, Kore, Fenrir, Aoede
+**Available voices:** Puck, Charon, Kore, Fenrir, Aoede
 
 ### Split Mode
 
@@ -638,15 +633,17 @@ voice:
     llm_model: "gemini-3.7-flash"
     tts_model: "gemini-3.1-flash-tts-preview"
     tts_voice: "Aoede"
+    tts_style: "extremely fast"
 ```
 
 **Pipeline:**
 
 ```
 Microphone -> Gemini 3.5 Transcribe Live (STT)
+           -> Context Guard (ensures valid context for Gemini)
            -> Gemini 3.7 Flash (LLM + tool calls)
-           -> TTSStyleProcessor (optional style tag)
-           -> Gemini 3.1 Flash TTS (text-to-speech)
+           -> Result Spill (large results → file)
+           -> Gemini 3.1 Flash TTS (text-to-speech with style tags)
            -> Speaker
 ```
 
@@ -658,11 +655,11 @@ Three separate models handle each stage independently.
 - Supports silent mode (the Note Taker persona skips the TTS stage entirely)
 - Text appears in the timeline before audio finishes (the "read-ahead" effect) because `BotLlmText` events arrive as the LLM generates text, before TTS processes it
 - Each model can be individually configured and upgraded
-- The voice is set by `split.tts_voice`
+- Voice is set by `split.tts_voice` globally, overridden per-persona via `voice.tts_voice` in persona files
 
 **TTS style control:**
 
-The `tts_style` option prepends a Gemini TTS style tag to the start of each response. Available styles:
+The `tts_style` option (global in `config.yaml`, per-persona in persona files) prepends a Gemini TTS style tag to the start of each response. Available styles:
 
 | Style | Effect |
 | --- | --- |
@@ -837,35 +834,71 @@ mcp_servers:
 
 ### Assigning MCP Servers to Personas
 
-In each persona's `tools` section, list the server names:
+In each persona file's YAML frontmatter, list the server names under `tools.mcp_servers`:
 
 ```yaml
-persona:
-  profiles:
-    my-persona:
-      tools:
-        builtin: [...]
-        mcp_servers: [server-name, another-server]
+# In ~/.config/voxcat/personas/my-persona.md
+---
+tools:
+  builtin: [...]
+  mcp_servers: [server-name, another-server]
+---
 ```
 
 Only personas that list a server will have access to its tools. Other personas see only built-in tools.
 
 ### Pre-Configured MCP Servers
 
-Voxcat ships with two MCP server configurations for the SRE persona:
+No MCP servers are pre-configured by default. All personas ship with `mcp_servers: []`.
 
-**Red Hat API (`redhat`):**
-- Provides: `search_cases`, `get_case`, `search_kcs`, `get_kcs`, `search_docs`, `get_doc`, `search_cve`, `get_cve`
-- Requires: `RH_API_OFFLINE_TOKEN`
+### Example: Red Hat API + Jira for SRE
 
-**Jira (`jira`):**
-- Provides: `jira_search_issues`, `jira_get_issue`, `jira_get_create_meta`
-- Requires: `JIRA_SERVER_URL`, `JIRA_API_TOKEN`, `JIRA_USER_EMAIL`
+Two companion MCP servers work well with the SRE persona:
+
+- [redhat-api-mcp](https://github.com/judexzhu/redhat-api-mcp) — Red Hat case, KCS, CVE, and documentation search
+- [mcp-jira](https://github.com/judexzhu/mcp-jira) — Jira issue search and lookup
+
+To set them up:
+
+1. Define servers in `config.yaml`:
+
+```yaml
+mcp_servers:
+  redhat:
+    command: "uv"
+    args: ["run", "python", "-m", "redhat_api_mcp.server"]
+    cwd: "/path/to/redhat-api-mcp"
+    env_keys: [RH_API_OFFLINE_TOKEN]
+    read_only_tools:
+      - search_cases
+      - get_case
+      - search_kcs
+      - get_kcs
+  jira:
+    command: "uv"
+    args: ["run", "python", "jira_mcp_server.py"]
+    cwd: "/path/to/mcp-jira"
+    env_keys: [JIRA_SERVER_URL, JIRA_API_TOKEN, JIRA_USER_EMAIL]
+    read_only_tools:
+      - jira_search_issues
+      - jira_get_issue
+```
+
+2. Assign them in the persona file (`~/.config/voxcat/personas/sre.md`):
+
+```yaml
+tools:
+  builtin: [...]
+  mcp_servers: [redhat, jira]
+```
+
+3. Set env vars in `~/.config/voxcat/.env`
+4. Restart Voxcat
 
 ### Adding Your Own MCP Server
 
 1. Define the server under `mcp_servers` in `config.yaml`
-2. Add the server name to the desired persona's `mcp_servers` list
+2. Add the server name to the desired persona file's `tools.mcp_servers` list
 3. Set any required environment variables in `.env`
 4. Restart Voxcat
 
@@ -901,7 +934,7 @@ Click any source to preview its full text content in the Document Preview panel 
 
 ## 13. Configuration Reference
 
-All configuration lives in `config.yaml` in the project root.
+All configuration lives in `~/.config/voxcat/config.yaml`. Persona definitions live in `~/.config/voxcat/personas/*.md` (see [Personas](#6-personas)).
 
 ### voice
 
@@ -909,29 +942,28 @@ Controls the voice processing pipeline.
 
 ```yaml
 voice:
-  name: "Aoede"
   mode: "split"
-  live_model: "gemini-3.1-flash-live-preview"
+  live:
+    model: "gemini-3.1-flash-live-preview"
+    voice: "Aoede"
   split:
-    stt_engine: "gemini"
     stt_model: "gemini-3.5-transcribe-live"
-    whisper_model: "mlx-community/whisper-large-v3-turbo"
     llm_model: "gemini-3.7-flash"
     tts_model: "gemini-3.1-flash-tts-preview"
-    tts_voice: "Kore"
-    tts_pace: "fast"
+    tts_voice: "Aoede"
+    tts_style: "extremely fast"
 ```
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `name` | string | `"Aoede"` | Default voice for live mode. Options: Puck, Charon, Kore, Fenrir, Aoede |
-| `mode` | string | `"live"` | Pipeline architecture: `"live"` (single model) or `"split"` (three models) |
-| `live_model` | string | `"gemini-3.1-flash-live-preview"` | Model for live mode (handles STT+LLM+TTS) |
+| `mode` | string | `"split"` | Pipeline architecture: `"live"` (single model) or `"split"` (three models) |
+| `live.model` | string | `"gemini-3.1-flash-live-preview"` | Model for live mode (handles STT+LLM+TTS) |
+| `live.voice` | string | `"Aoede"` | Voice for live mode. Options: Puck, Charon, Kore, Fenrir, Aoede |
 | `split.stt_model` | string | `"gemini-3.5-transcribe-live"` | Speech-to-text model for split mode |
 | `split.llm_model` | string | `"gemini-3.7-flash"` | Language model for split mode (reasoning + tool calls) |
 | `split.tts_model` | string | `"gemini-3.1-flash-tts-preview"` | Text-to-speech model for split mode |
-| `split.tts_voice` | string | falls back to `name` | Voice for split mode TTS. Overrides `voice.name` |
-| `split.tts_style` | string | none | TTS style tag: `"extremely fast"`, `"whispering"`, `"shouting"`, `"sarcasm"`, `"robotic"`, or omit for default |
+| `split.tts_voice` | string | `"Aoede"` | Global default voice for split mode TTS. Per-persona overrides in persona files |
+| `split.tts_style` | string | none | Global default TTS style. Per-persona overrides in persona files. Options: `"extremely fast"`, `"whispering"`, `"shouting"`, `"sarcasm"`, `"robotic"` |
 
 ### tools
 
@@ -965,43 +997,21 @@ mcp_servers:
 
 ### persona
 
-Controls persona definitions and shared behavior.
-
 ```yaml
 persona:
   default: "thinking-partner"
-  profiles:
-    persona-slug:
-      label: "Display Name"
-      description: "One-line description shown on landing page."
-      instruction: |
-        Persona-specific instructions...
-      silent: false
-      tools:
-        builtin:
-          - tool_name
-        mcp_servers:
-          - server_name
-      output:
-        directory: "output/persona-slug"
 ```
-
-Tool routing instructions (e.g. "call web_search for factual questions") are assembled automatically based on which tools are actually registered. Only tools with valid API keys get routing lines in the system prompt.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `default` | string | Persona slug used when none is specified |
-| `profiles` | map | Persona definitions keyed by slug |
-| `profiles.<slug>.label` | string | Display name in the UI (defaults to slug in title case) |
-| `profiles.<slug>.description` | string | One-line description shown on the landing page |
-| `profiles.<slug>.instruction` | string | System prompt for this persona |
-| `profiles.<slug>.silent` | boolean | If `true`, skips TTS output. Auto-switches to split mode if live. |
-| `profiles.<slug>.tools.builtin` | list | Built-in tool names to enable |
-| `profiles.<slug>.tools.mcp_servers` | list | MCP server names this persona can access |
-| `profiles.<slug>.output.directory` | string | File output path relative to project root |
+| `default` | string | Persona slug used when none is specified in the URL |
 
-**Built-in tool names for the `builtin` list:**
-`websearch`, `web_read`, `file_read`, `file_write`, `file_list`, `summarize_session`, `get_current_time`, `deep_analysis`, `research`, `notebooklm_sync`
+Persona definitions live in `~/.config/voxcat/personas/*.md` as markdown files with YAML frontmatter. See [Personas](#6-personas) for the file format and all fields.
+
+**Fallback:** If no persona files exist, Voxcat reads `persona.profiles` from `config.yaml` for backward compatibility.
+
+**Built-in tool names for the `tools.builtin` list:**
+`websearch`, `web_read`, `file_read`, `file_write`, `file_list`, `set_topic`, `summarize_session`, `get_current_time`, `deep_analysis`, `research`, `notebooklm_sync`
 
 ### server
 
@@ -1034,12 +1044,13 @@ The backend is a single Python process (`bot.py`) that serves three roles:
 
 | File | Purpose |
 | --- | --- |
-| `bot.py` | Pipeline setup, HTTP routes, entry point |
-| `tools.py` | 10 tool handlers + `build_tools()` registry |
+| `cli.py` | CLI entry point, HTTP routes, server startup |
+| `bot.py` | Pipeline orchestrator (live + split modes) |
+| `tools.py` | 11 tool handlers + `build_tools()` registry |
+| `personas.py` | Persona file loader (YAML frontmatter + markdown body) |
 | `transcript.py` | `TranscriptRecorder` class for saving transcripts and sessions |
 | `mcp_connect.py` | MCP server connection with `tools_filter` for allowlisting |
 | `filestore.py` | `safe_resolve()` path traversal prevention |
-| `config.yaml` | All configuration |
 
 ### Frontend
 
@@ -1143,7 +1154,7 @@ Or run `./setup.sh` which handles this automatically if Node.js is available.
    - `TAVILY_API_KEY` for web_search, web_read, research
    - `NOTEBOOKLM_NOTEBOOK_ID` for notebooklm_sync
 2. Check the terminal logs. Missing keys produce warnings like: `Tool not available: websearch (missing API key or not implemented)`
-3. Make sure the tool is listed in the persona's `tools.builtin` array in `config.yaml`
+3. Make sure the tool is listed in the persona file's `tools.builtin` array
 
 ### MCP server won't connect
 
@@ -1154,12 +1165,7 @@ Or run `./setup.sh` which handles this automatically if Node.js is available.
 
 ### Note Taker still speaks
 
-The Note Taker's silent mode only works in **split** voice mode. In live mode, the Gemini Live model always generates audio output regardless of instructions. Set:
-
-```yaml
-voice:
-  mode: "split"
-```
+The Note Taker's silent mode only works in **split** voice mode. If `voice.mode` is `"live"`, Voxcat auto-switches to split mode for silent personas. If the Note Taker is still speaking, check that `silent: true` is set in the persona file's frontmatter.
 
 ### Timeline stops auto-scrolling
 
