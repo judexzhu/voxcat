@@ -25,7 +25,7 @@ import json
 import re
 from datetime import datetime
 
-from pipecat.frames.frames import FunctionCallResultFrame
+from pipecat.frames.frames import FunctionCallResultFrame, TextFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 from .mcp_connect import connect_mcp_servers
@@ -263,12 +263,20 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             })
             await worker.queue_frames([LLMRunFrame()])
         else:
-            context.add_message({
-                "role": "developer",
-                "content": "Greet the user briefly. Introduce yourself based on your role. "
-                "Ask what they'd like to work on today.",
-            })
-            await worker.queue_frames([LLMRunFrame()])
+            greeting = persona.get("greeting")
+            if greeting:
+                context.add_message({
+                    "role": "developer",
+                    "content": f"Your ENTIRE first response must be exactly: \"{greeting}\"\n"
+                    "Do not add anything before or after it. Do not introduce yourself. Just say those exact words.",
+                })
+            else:
+                context.add_message({
+                    "role": "developer",
+                    "content": "Greet the user briefly. Introduce yourself based on your role. "
+                    "Ask what they'd like to work on today.",
+                })
+                await worker.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
