@@ -23,11 +23,12 @@ function classify(result: unknown, cancelled: boolean): ResultKind {
   if (parsed && typeof parsed === "object") {
     const obj = parsed as Record<string, unknown>;
     if (obj.error) return "status";
-    if (obj.status) return "status";
     if (Array.isArray(obj.results)) return "results";
     if (Array.isArray(obj.files)) return "results";
     if (Array.isArray(obj.issues)) return "results";
     if (obj.analysis || obj.report || obj.content) return "prose";
+    const keys = Object.keys(obj);
+    if (obj.status && keys.length <= 2) return "status";
   }
   if (typeof parsed === "string") return "prose";
   return "raw";
