@@ -52,6 +52,16 @@ def init_project():
         env_dest.write_text((pkg / ".env.example").read_text())
         print(f"  created {env_dest}")
 
+    personas_dest = CONFIG_DIR / "personas"
+    if personas_dest.is_dir():
+        print(f"  skip {personas_dest}/ (already exists)")
+    else:
+        import shutil
+        pkg_personas = Path(str(pkg / "personas"))
+        if pkg_personas.is_dir():
+            shutil.copytree(str(pkg_personas), str(personas_dest))
+            print(f"  created {personas_dest}/ ({len(list(personas_dest.glob('*.md')))} personas)")
+
     print(f"\nEdit {env_dest} with your API keys, then run: voxcat")
 
 
@@ -88,6 +98,7 @@ def main():
 
     from .bot import load_config, set_config
     from .filestore import safe_resolve
+    from .personas import load_personas
     from . import transcript
 
     # pipecat runner discovers bot() via sys.modules["__main__"]
@@ -109,7 +120,11 @@ def main():
         sys.exit(1)
 
     config = load_config(config_path)
-    available_personas = list(config["persona"]["profiles"].keys())
+
+    personas_dir = CONFIG_DIR / "personas"
+    profiles = load_personas(personas_dir, config)
+    config.setdefault("persona", {})["profiles"] = profiles
+    available_personas = list(profiles.keys())
 
     if args.port:
         config.setdefault("server", {})["port"] = args.port
