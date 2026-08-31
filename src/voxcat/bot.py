@@ -62,6 +62,27 @@ def build_common_instruction(registered_tool_names: set[str]) -> str:
 TTS_STYLES = ("extremely fast", "whispering", "shouting", "sarcasm", "robotic")
 
 
+class ContextGuardProcessor(FrameProcessor):
+    """Gemini rejects requests ending with a model turn. This happens when
+    users interrupt mid-tool-call. Fix by appending a synthetic user turn."""
+
+    def __init__(self, context):
+        super().__init__()
+        self._context = context
+
+    async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
+        if isinstance(frame, LLMRunFrame) and self._context.messages:
+            last = self._context.messages[-1]
+            if isinstance(last, dict) and last.get("role") == "model":
+                self._context.messages.append({
+                    "role": "user",
+                    "parts": [{"text": "continue"}],
+                })
+                logger.warning("Context ended with model turn — appended synthetic user turn")
+        await self.push_frame(frame, direction)
+
+
 class ResultSpillProcessor(FrameProcessor):
     # ponytail: 5000 char threshold is a workaround — needs real usage data to find optimal value
     def __init__(self, output_dir: str, threshold: int = 5000, preview_size: int = 2000):
@@ -158,6 +179,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     result_spill = ResultSpillProcessor(output_dir)
 
     context = LLMContext(tools=tools)
+    context_guard = ContextGuardProcessor(context)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
 
     if voice_mode == "split":
@@ -184,6 +206,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 transport.input(),
                 stt,
                 user_aggregator,
+                context_guard,
                 llm,
                 result_spill,
                 transport.output(),
@@ -207,6 +230,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 transport.input(),
                 stt,
                 user_aggregator,
+                context_guard,
                 llm,
                 result_spill,
                 tts,
@@ -226,6 +250,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         pipeline = Pipeline([
             transport.input(),
             user_aggregator,
+            context_guard,
             llm,
             result_spill,
             transport.output(),
