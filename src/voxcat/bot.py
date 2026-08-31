@@ -276,7 +276,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                     "content": "Greet the user briefly. Introduce yourself based on your role. "
                     "Ask what they'd like to work on today.",
                 })
-                await worker.queue_frames([LLMRunFrame()])
+            await worker.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
