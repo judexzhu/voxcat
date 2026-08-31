@@ -39,26 +39,26 @@ Frontend connects via WebRTC. RTVI data channel carries transcripts and tool cal
 
 ```bash
 # Prerequisites: Python 3.13+, uv
-
-# Option A: install as a tool
 uv tool install git+https://github.com/judexzhu/voxcat
 voxcat init              # creates ~/.config/voxcat/config.yaml + .env
-# Edit ~/.config/voxcat/.env: GOOGLE_API_KEY (required), TAVILY_API_KEY (optional)
+# Edit ~/.config/voxcat/.env with your API keys:
+#   GOOGLE_API_KEY (required)
+#   TAVILY_API_KEY (optional — web search)
 voxcat                   # start server on :7860
-# Output files go to ~/Documents/voxcat/
-
-# Option B: clone and run
-git clone https://github.com/judexzhu/voxcat && cd voxcat
-./setup.sh
-# Edit .env: GOOGLE_API_KEY (required), TAVILY_API_KEY (optional)
-uv run voxcat            # start server on :7860
-
-# Dev (with hot reload — requires Node 20+)
-cd client && npm run dev   # frontend on :5173
-uv run voxcat              # backend on :7860
 ```
 
 Open `http://localhost:7860`, select a persona, start talking.
+
+Output files go to `~/Documents/voxcat/`. Config lives at `~/.config/voxcat/`.
+
+### Development (frontend changes)
+
+```bash
+git clone https://github.com/judexzhu/voxcat && cd voxcat
+uv sync
+cd client && npm ci && npm run dev   # frontend on :5173 with hot reload
+uv run voxcat                        # backend on :7860
+```
 
 ## Configuration
 
@@ -66,14 +66,16 @@ All in `config.yaml`:
 
 ```yaml
 voice:
-  mode: "live"                              # or "split"
-  live_model: "gemini-3.1-flash-live-preview"
+  mode: "split"                             # or "live"
+  live:
+    model: "gemini-3.1-flash-live-preview"
+    voice: "Aoede"                          # Puck, Charon, Kore, Fenrir, Aoede
   split:
     stt_model: "gemini-3.5-transcribe-live"
-    llm_model: "gemini-3.6-flash"
+    llm_model: "gemini-3.7-flash"
     tts_model: "gemini-3.1-flash-tts-preview"
-    tts_voice: "Kore"                       # Puck, Charon, Kore, Fenrir, Aoede
-    tts_pace: "fast"                        # slow, fast, or remove for default
+    tts_voice: "Aoede"
+    tts_style: "extremely fast"             # extremely fast, whispering, shouting, sarcasm, robotic
 
 persona:
   default: "thinking-partner"

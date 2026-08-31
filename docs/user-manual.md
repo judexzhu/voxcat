@@ -44,29 +44,27 @@ Voxcat is built on [Pipecat](https://github.com/pipecat-ai/pipecat) for pipeline
 
 ## 2. Installation
 
-### Step 1: Clone the Repository
+### Step 1: Install
 
 ```bash
-git clone <repo-url>
-cd voxcat
+uv tool install git+https://github.com/judexzhu/voxcat
 ```
 
-### Step 2: Run Setup
+This installs Voxcat as a standalone command. No clone, no Node.js, no build steps.
+
+### Step 2: Initialize Configuration
 
 ```bash
-./setup.sh
+voxcat init
 ```
 
-This script:
+This creates:
+- `~/.config/voxcat/config.yaml` — persona, voice, and server settings
+- `~/.config/voxcat/.env` — API keys
 
-1. Checks that `uv` is installed (exits with an error message and install link if not)
-2. Runs `uv sync` to install all Python dependencies
-3. If Node.js is available and `client/package.json` exists, rebuilds the frontend with `npm ci && npm run build`. Otherwise, uses the pre-built `client/dist/` that ships with the repository
-4. If no `.env` file exists, copies `.env.example` as a starting point
+### Step 3: Configure API Keys
 
-### Step 3: Configure Environment Variables
-
-Edit the `.env` file in the project root:
+Edit `~/.config/voxcat/.env`:
 
 ```env
 # Required
@@ -77,14 +75,6 @@ TAVILY_API_KEY=your-tavily-api-key
 
 # Optional: enables notebooklm_sync tool and NotebookLM source browsing
 NOTEBOOKLM_NOTEBOOK_ID=your-notebook-id
-
-# Optional: for the SRE persona's Red Hat API MCP server
-RH_API_OFFLINE_TOKEN=your-token
-
-# Optional: for the SRE persona's Jira MCP server
-JIRA_SERVER_URL=https://your-jira.atlassian.net
-JIRA_API_TOKEN=your-jira-token
-JIRA_USER_EMAIL=you@example.com
 ```
 
 **Required keys:**
@@ -95,38 +85,47 @@ JIRA_USER_EMAIL=you@example.com
 
 - Without `TAVILY_API_KEY`, three tools are silently disabled: `web_search`, `web_read`, and `research`. The agent still works, but cannot search the web or read URLs.
 - Without `NOTEBOOKLM_NOTEBOOK_ID`, the `notebooklm_sync` tool is disabled and the NotebookLM section does not appear in the Output panel.
-- The Red Hat API and Jira keys are only needed if you use the SRE persona with those MCP servers configured.
 
-### Step 4: Verify
+### Step 4: Start
 
 ```bash
-uv run python bot.py
-```
-
-You should see log output like:
-
-```
-INFO     Persona: thinking-partner | Mode: split | ...
-INFO     Server running on http://0.0.0.0:7860
+voxcat
 ```
 
 Open `http://localhost:7860` in your browser.
 
-### Development Mode
-
-If you are modifying the frontend code, you need Node.js 20+ for hot reload:
+### Updating
 
 ```bash
-# Terminal 1: frontend with hot reload
-cd client && npm run dev
-
-# Terminal 2: backend
-uv run python bot.py
+uv tool install --force git+https://github.com/judexzhu/voxcat
 ```
 
-In development mode, open `http://localhost:5173`. The Vite dev server proxies API calls (`/api`, `/start`, `/sessions`) to the backend on port 7860.
+### File Locations
 
-In production mode (the default), open `http://localhost:7860`. The backend serves the pre-built frontend directly from `client/dist/`.
+| Path | Purpose |
+| --- | --- |
+| `~/.config/voxcat/config.yaml` | Configuration |
+| `~/.config/voxcat/.env` | API keys |
+| `~/Documents/voxcat/output/` | Per-persona output files |
+| `~/Documents/voxcat/sessions/` | Session transcripts |
+| `~/Documents/voxcat/logs/` | Log files |
+
+### Development Mode
+
+For modifying the frontend or backend source:
+
+```bash
+git clone https://github.com/judexzhu/voxcat && cd voxcat
+uv sync
+
+# Terminal 1: frontend with hot reload (requires Node.js 20+)
+cd client && npm ci && npm run dev
+
+# Terminal 2: backend
+uv run voxcat
+```
+
+In development mode, open `http://localhost:5173`. The Vite dev server proxies API calls to the backend on port 7860.
 
 ---
 
@@ -135,17 +134,25 @@ In production mode (the default), open `http://localhost:7860`. The backend serv
 Run:
 
 ```bash
-uv run python bot.py
+voxcat
 ```
 
 Open your browser to `http://localhost:7860`. You are taken to the Landing Page.
 
-The server listens on `0.0.0.0:7860` by default. You can change the host and port in `config.yaml`:
+The server listens on `0.0.0.0:7860` by default. You can change the host and port in `~/.config/voxcat/config.yaml`:
 
 ```yaml
 server:
   host: "0.0.0.0"
   port: 7860
+```
+
+Command-line options:
+
+```bash
+voxcat --port 8080           # override port
+voxcat --log-level DEBUG     # verbose logging
+voxcat --config /path/to/config.yaml  # custom config path
 ```
 
 ---
