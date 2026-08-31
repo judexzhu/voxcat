@@ -98,7 +98,7 @@ export function ActivityPanel({ entries, speaking, onFileClick, onSendText }: Pr
                   <div className="timeline-speaker timeline-speaker-bot">
                     VOXCAT
                   </div>
-                  <div className="timeline-utterance"><Markdown>{entry.text}</Markdown></div>
+                  <div className="timeline-utterance"><Markdown components={{a: ({children, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer">{children}</a>}}>{entry.text}</Markdown></div>
                   {streaming && (
                     <div className="timeline-speaking">
                       <div className="timeline-speaking-track">

@@ -133,7 +133,7 @@ export function FilePreview({ selected, onSelect, onDeleted, refreshKey }: Props
         {raw ? (
           <pre className="doc-raw">{content}</pre>
         ) : (
-          <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]} components={{a: ({children, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer">{children}</a>}}>{content}</Markdown>
         )}
       </div>
     </div>

@@ -485,7 +485,7 @@ function PastSessions({
                   </div>
                 </div>
                 <div className="doc-scroll vx-scroll">
-                  <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+                  <Markdown remarkPlugins={[remarkGfm]} components={{a: ({children, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer">{children}</a>}}>{content}</Markdown>
                 </div>
               </div>
             ) : (
