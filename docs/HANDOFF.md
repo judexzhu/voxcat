@@ -32,7 +32,7 @@ uv run python bot.py
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.13+
 - `brew install portaudio` (macOS)
 - Google Gemini API key from https://aistudio.google.com/apikey
 

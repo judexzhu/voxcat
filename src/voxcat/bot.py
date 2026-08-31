@@ -25,13 +25,41 @@ import json
 import re
 from datetime import datetime
 
-from pipecat.frames.frames import FunctionCallResultFrame, TextFrame
+from pipecat.frames.frames import FunctionCallResultFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
-from .filestore import safe_resolve
 from .mcp_connect import connect_mcp_servers
 from .tools import build_tools
 from .transcript import TranscriptRecorder
+
+TOOL_ROUTING = {
+    "deep_analysis": 'Questions with "why", "root cause", "analyze", "compare", "trade-offs" → ALWAYS call deep_analysis.\n'
+                     'User says "think deeper" or "analyze this" → call deep_analysis immediately.',
+    "research": 'User says "research" or "look into" → call research. It searches, reads sources, and synthesizes a report.',
+    "websearch": "Factual question → call web_search. Never guess.",
+    "web_read": "URL in search results looks useful → call web_read on it.",
+    "set_topic": 'After the first substantive exchange, call set_topic with a short descriptive slug for this session (e.g. "ai-sre-exploration"). Do this once, silently — don\'t announce it.',
+    "summarize_session": 'User says "wrap up", "summarize", "done", "that\'s all for today" → call summarize_session. It saves the summary silently — don\'t read it aloud, just confirm it\'s saved.',
+    "notebooklm_sync": 'User says "sync to notebook", "push to NotebookLM", or "archive this" → call notebooklm_sync with the content.',
+    "get_current_time": "When asked the time, call get_current_time.",
+}
+
+COMMON_INSTRUCTION_BASE = (
+    "Before calling ANY tool, say a brief phrase like \"Let me check\", \"Looking that up\", \"One moment\" — never go silent while a tool runs.\n"
+    "NEVER call the same tool twice with the same arguments. If a tool already returned results, use those results — do not re-call it.\n"
+    "After a tool returns, ALWAYS speak the result to the user before calling another tool.\n"
+    "When asked to save, don't confirm — just save."
+)
+
+
+def build_common_instruction(registered_tool_names: set[str]) -> str:
+    lines = [COMMON_INSTRUCTION_BASE]
+    for tool_key, routing_line in TOOL_ROUTING.items():
+        if tool_key in registered_tool_names:
+            lines.append(routing_line)
+    return "\n".join(lines)
+
+TTS_STYLES = ("extremely fast", "whispering", "shouting", "sarcasm", "robotic")
 
 
 class ResultSpillProcessor(FrameProcessor):
@@ -101,16 +129,15 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.warning(f"Unknown persona '{persona_name}', falling back to default")
         persona_name = config["persona"]["default"]
     persona = config["persona"]["profiles"][persona_name]
-    common = config["persona"].get("common_instruction", "")
-    system_instruction = persona["instruction"] + "\n" + common if common else persona["instruction"]
     voice_config = config["voice"]
     voice_mode = voice_config.get("mode", "live")
-    output_dir = persona.get("output", {}).get("directory", "brainstorms")
+    output_dir = persona.get("output", {}).get("directory", f"output/{persona_name}")
     builtin_tools = persona.get("tools", {}).get("builtin", [])
     mcp_server_names = persona.get("tools", {}).get("mcp_servers", [])
 
     recorder = TranscriptRecorder(output_dir, persona=persona_name)
-    tools = build_tools(builtin_tools, output_dir, recorder)
+    tools_config = config.get("tools", {})
+    tools = build_tools(builtin_tools, output_dir, recorder, tools_config=tools_config)
 
     mcp_clients = []
     if mcp_server_names:
@@ -118,7 +145,14 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         mcp_tools, mcp_clients = await connect_mcp_servers(mcp_server_names, mcp_config)
         tools.extend(mcp_tools)
 
+    registered_names = set(builtin_tools) | {t.name for t in tools}
+    common = build_common_instruction(registered_names)
+    system_instruction = f"{common}\n\n{persona['instruction']}"
+
     is_silent = persona.get("silent", False)
+    if is_silent and voice_mode == "live":
+        logger.warning(f"Persona '{persona_name}' is silent but live mode cannot mute TTS — auto-switching to split mode")
+        voice_mode = "split"
     logger.info(f"Persona: {persona_name} | Mode: {voice_mode} | Silent: {is_silent} | Tools: {len(tools)} | Output: {output_dir}")
 
     result_spill = ResultSpillProcessor(output_dir)
@@ -164,7 +198,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
             tts_style = split_config.get("tts_style")
             if tts_style:
-                apply_tts_style(tts, tts_style)
+                if tts_style in TTS_STYLES:
+                    apply_tts_style(tts, tts_style)
+                else:
+                    logger.warning(f"Unknown tts_style '{tts_style}' — ignored. Valid: {', '.join(TTS_STYLES)}")
 
             pipeline = Pipeline([
                 transport.input(),
@@ -216,19 +253,22 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info(f"Client connected — starting {persona_name} session")
-        if prior_context:
+        if is_silent:
+            logger.info("Silent persona — skipping greeting")
+        elif prior_context:
             context.add_message({
                 "role": "developer",
                 "content": f"The user is continuing a previous session. Here is the transcript:\n\n{prior_context}\n\n"
                 "Welcome them back briefly. Reference what was discussed. Ask what they'd like to continue with.",
             })
+            await worker.queue_frames([LLMRunFrame()])
         else:
             context.add_message({
                 "role": "developer",
                 "content": "Greet the user briefly. Introduce yourself based on your role. "
                 "Ask what they'd like to work on today.",
             })
-        await worker.queue_frames([LLMRunFrame()])
+            await worker.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
@@ -248,7 +288,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         timestamp = f"[{message.timestamp}] " if message.timestamp else ""
         logger.info(f"Transcript: {timestamp}user: {message.content}")
 
-    _style_tag_re = re.compile(r"\[(?:extremely fast|whispering|shouting|sarcasm|robotic)\]\s?")
+    _style_tag_re = re.compile(r"\[(?:" + "|".join(re.escape(s) for s in TTS_STYLES) + r")\]\s?")
 
     @assistant_aggregator.event_handler("on_assistant_turn_stopped")
     async def on_assistant_turn_stopped(aggregator, message: AssistantTurnStoppedMessage):

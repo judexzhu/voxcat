@@ -6,61 +6,84 @@ Voxcat is a voice AI agent built on Pipecat with swappable personas. Same pipeli
 
 ## Architecture
 
-```
-Browser (mic/speaker) ←WebRTC→ SmallWebRTCTransport
-                                    ↓
-                              user_aggregator (tracks user turns)
-                                    ↓
-                              GeminiLiveLLMService (STT+LLM+TTS + function calling)
-                                    ↓
-                              SmallWebRTCTransport output
-                                    ↓
-                              assistant_aggregator (tracks bot turns)
+Two pipeline modes, configurable in `config.yaml`:
 
-Tools: WebSearch (Tavily) | File read/write | MCP (Red Hat, Jira) | NotebookLM
-Event handlers on aggregators → TranscriptRecorder → output dir
 ```
+Live mode (~300ms latency):
+  Browser (mic/speaker) ←WebRTC→ SmallWebRTCTransport
+                                      ↓
+                                user_aggregator
+                                      ↓
+                                GeminiLiveLLMService (STT+LLM+TTS + tools)
+                                      ↓
+                                transport.output()
+                                      ↓
+                                assistant_aggregator
+
+Split mode (~800ms, smarter):
+  Browser ←WebRTC→ SmallWebRTCTransport
+                        ↓
+                   GeminiSTTService (transcribe)
+                        ↓
+                   user_aggregator
+                        ↓
+                   GoogleLLMService (LLM + tools)
+                        ↓
+                   ResultSpillProcessor (large results → file)
+                        ↓
+                   GeminiTTSService (with optional style tags)
+                        ↓
+                   transport.output()
+                        ↓
+                   assistant_aggregator
+```
+
+RTVI observer reports tool calls to the frontend via WebRTC data channel.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `bot.py` | Main bot — pipeline, transport, tools, transcript recording |
-| `config.yaml` | Voice, persona profiles (instruction + tools + output), server settings |
-| `.env` | API keys (`GOOGLE_API_KEY`, `TAVILY_API_KEY`) |
-| `DESIGN.md` | Architecture decisions and implementation plan |
-| `brainstorms/` | Default output directory for brainstorm sessions |
+| `src/voxcat/cli.py` | CLI entry point, HTTP routes, server startup |
+| `src/voxcat/bot.py` | Pipeline orchestrator (live + split modes) |
+| `src/voxcat/tools.py` | 11 tool handlers + `build_tools()` registry |
+| `src/voxcat/transcript.py` | TranscriptRecorder (output + session files) |
+| `src/voxcat/mcp_connect.py` | MCP server connection with read-only filter |
+| `src/voxcat/filestore.py` | `safe_resolve()` for path traversal prevention |
+| `src/voxcat/config.yaml.example` | Default config template |
+| `client/src/` | React frontend (Vite + TypeScript) |
 
 ## Commands
 
 ```bash
-uv run python bot.py
-# Opens at http://localhost:7860
-# Persona selection: http://localhost:7860?persona=sre
+# Install
+uv tool install git+https://github.com/judexzhu/voxcat
+
+# Run
+voxcat init              # creates ~/.config/voxcat/config.yaml + .env
+voxcat                   # start server on :7860
+
+# Development
+uv sync                  # install Python deps
+cd client && npm ci      # install frontend deps
+npm run dev              # frontend on :5173 with hot reload
+uv run voxcat            # backend on :7860
 ```
 
-## Staging Plan
+## Output Directories
 
-| Stage | What |
-|-------|------|
-| 1 (done) | Gemini Live + SmallWebRTC + transcript + personas |
-| 1.5 (current) | Function calling, WebSearch, file ops, MCP (Red Hat + Jira read-only), LLM summary |
-| 2 | CLI tools, NotebookLM sync, container deployment |
+- Config: `~/.config/voxcat/`
+- Data: `~/Documents/voxcat/`
+  - `output/{persona}/` — per-persona files
+  - `sessions/{persona}/` — session transcripts
+  - `logs/` — daily log files
+
+## Tests
+
+```bash
+uv run pytest -v
+```
 
 ## Code Style
 
-Follow Pipecat conventions. Type hints for async code. Single bot.py until ~300 lines.
-
-## Agent skills
-
-### Issue tracker
-
-Issues tracked as local markdown under `.scratch/`. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Default five-role vocabulary. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context layout — one `CONTEXT.md` + `docs/adr/` at root. See `docs/agents/domain.md`.
+Follow Pipecat conventions. Type hints. Async handlers.

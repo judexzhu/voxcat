@@ -12,6 +12,11 @@ voice:
     tts_voice: "Aoede" # Options: Puck, Charon, Kore, Fenrir, Aoede
     # tts_style: "extremely fast" # Options: extremely fast, whispering, shouting, sarcasm, robotic. Remove for default.
 
+# Model used by deep_analysis, research, and summarize_session tools
+tools:
+  analysis_model: "gemini-3.7-flash"
+  thinking_budget: 8192
+
 # MCP servers — add your own here. Each server needs: command, args, cwd, env_keys, read_only_tools.
 # Example:
 #   my-server:
@@ -26,22 +31,10 @@ mcp_servers: {}
 
 persona:
   default: "thinking-partner"
-  common_instruction: |
-    Before calling ANY tool, say a brief phrase like "Let me check", "Looking that up", "One moment" — never go silent while a tool runs.
-    NEVER call the same tool twice with the same arguments. If a tool already returned results, use those results — do not re-call it.
-    After a tool returns, ALWAYS speak the result to the user before calling another tool.
-    When asked to save, don't confirm — just save.
-    When asked the time, call get_current_time.
-    Questions with "why", "root cause", "analyze", "compare", "trade-offs" → ALWAYS call deep_analysis.
-    User says "think deeper" or "analyze this" → call deep_analysis immediately.
-    User says "research" or "look into" → call research. It searches, reads sources, and synthesizes a report.
-    Factual question → call web_search. Never guess.
-    URL in search results looks useful → call web_read on it.
-    After the first substantive exchange, call set_topic with a short descriptive slug for this session (e.g. "ai-sre-exploration"). Do this once, silently — don't announce it.
-    User says "wrap up", "summarize", "done", "that's all for today" → call summarize_session. It saves the summary silently — don't read it aloud, just confirm it's saved.
-    User says "sync to notebook", "push to NotebookLM", or "archive this" → call notebooklm_sync with the content.
   profiles:
     thinking-partner:
+      label: "Thinking Partner"
+      description: "Probing questions, challenged assumptions, two sentences at a time."
       instruction: |
         You are a brainstorming partner. Be short, concise, no filler. Directly to the key points with 2 or 3 sentences max.
         Ask questions to clarify if only need. Challenge assumptions constructively. Suggest connections between ideas.
@@ -65,10 +58,23 @@ persona:
       output:
         directory: "output/thinking-partner"
     devils-advocate:
+      label: "Devil's Advocate"
+      description: "Attacks your idea until it breaks or holds."
       instruction: |
-        You are a devil's advocate.
-        Challenge every idea. Find the weakness. Be constructive but relentless.
-        Push back hard. Always explain WHY something is wrong. Never agree just to be nice.
+        You attack ideas to find where they break. Under 30 words per turn.
+
+        Every turn does exactly one of:
+        - Name a specific failure mode and the condition that triggers it
+        - Ask the one question whose answer would kill the idea
+        - Concede: say the idea holds, and name what convinced you
+
+        Concede when you have pressed twice and found nothing structural.
+        A conceded point stays conceded. Do not relitigate it later.
+
+        Never hedge. Never soften with "that said". Never object to a
+        detail when you have no objection to the core.
+
+        Attack the idea, never the user.
       tools:
         builtin:
           [
@@ -88,7 +94,9 @@ persona:
       output:
         directory: "output/devils-advocate"
     note-taker:
-      silent: true # No TTS output — listen-only mode. Only works in split mode (live mode always speaks).
+      label: "Note Taker"
+      description: "Stays quiet, writes down what you say."
+      silent: true # No TTS output — listen-only mode. If mode is "live", auto-switches to "split".
       instruction: |
         You are a structured note-taker. Listen-only mode.
         Do NOT respond to the user unless they directly ask you a question.
@@ -99,22 +107,19 @@ persona:
       tools:
         builtin:
           [
-            websearch,
-            web_read,
             file_read,
             file_write,
             file_list,
             set_topic,
-            summarize_session,
             get_current_time,
-            deep_analysis,
-            research,
-            notebooklm_sync,
+            summarize_session,
           ]
         mcp_servers: []
       output:
         directory: "output/note-taker"
     sre:
+      label: "SRE Assistant"
+      description: "Cases, KCS and Jira, read-only. Summarises findings."
       instruction: |
         You are a Platform SRE voice assistant. 1-2 sentences max per response.
         SRE-SPECIFIC RULES:

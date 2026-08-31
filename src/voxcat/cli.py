@@ -131,7 +131,15 @@ def main():
 
     @app.get("/api/personas")
     async def list_personas():
-        return {"personas": available_personas, "default": config["persona"]["default"]}
+        personas = []
+        for name in available_personas:
+            profile = config["persona"]["profiles"][name]
+            personas.append({
+                "name": name,
+                "label": profile.get("label", name.replace("-", " ").title()),
+                "description": profile.get("description", ""),
+            })
+        return {"personas": personas, "default": config["persona"]["default"]}
 
     @app.get("/api/files/tree")
     async def file_tree():
@@ -143,8 +151,7 @@ def main():
             files = sorted(output_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
             tree.append({
                 "persona": name,
-                "label": {"thinking-partner": "Thinking Partner", "devils-advocate": "Devil's Advocate",
-                          "note-taker": "Note Taker", "sre": "SRE Assistant"}.get(name, name),
+                "label": profile.get("label", name.replace("-", " ").title()),
                 "files": [
                     {"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
                     for f in files[:50] if f.is_file()
@@ -155,7 +162,7 @@ def main():
     @app.get("/api/files")
     async def list_files(persona: str = "thinking-partner"):
         profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
+        output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
         output_dir.mkdir(parents=True, exist_ok=True)
         files = sorted(output_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
         return {
@@ -169,7 +176,7 @@ def main():
     @app.get("/api/files/{filename:path}")
     async def read_file(filename: str, persona: str = "thinking-partner"):
         profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
+        output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
         path = safe_resolve(output_dir, filename)
         if not path or not path.exists():
             return {"error": "File not found"}
@@ -178,7 +185,7 @@ def main():
     @app.delete("/api/files/{filename:path}")
     async def delete_file(filename: str, persona: str = "thinking-partner"):
         profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
+        output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
         path = safe_resolve(output_dir, filename)
         if not path or not path.exists():
             return {"error": "File not found"}
@@ -188,7 +195,7 @@ def main():
     @app.post("/api/files/{filename:path}/rename")
     async def rename_file(filename: str, new_name: str, persona: str = "thinking-partner"):
         profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "brainstorms"))
+        output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
         path = safe_resolve(output_dir, filename)
         if not path or not path.exists():
             return {"error": "File not found"}

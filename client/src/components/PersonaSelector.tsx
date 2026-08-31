@@ -1,19 +1,10 @@
 import { useEffect, useState } from "react";
 
-const PERSONA_LABELS: Record<string, string> = {
-  "thinking-partner": "Thinking Partner",
-  "devils-advocate": "Devil's Advocate",
-  "note-taker": "Note Taker",
-  sre: "SRE Assistant",
-};
-
-const PERSONA_DESCS: Record<string, string> = {
-  "thinking-partner":
-    "Probing questions, challenged assumptions, two sentences at a time.",
-  "devils-advocate": "Takes the opposite side of whatever you just said.",
-  "note-taker": "Stays quiet, writes down what you say.",
-  sre: "Cases, KCS and Jira, read-only. Summarises findings.",
-};
+interface PersonaInfo {
+  name: string;
+  label: string;
+  description: string;
+}
 
 interface FileCount {
   persona: string;
@@ -27,7 +18,7 @@ interface Props {
 }
 
 export function PersonaSelector({ value, onChange }: Props) {
-  const [personas, setPersonas] = useState<string[]>([]);
+  const [personas, setPersonas] = useState<PersonaInfo[]>([]);
   const [fileCounts, setFileCounts] = useState<Record<string, FileCount>>({});
 
   useEffect(() => {
@@ -56,28 +47,24 @@ export function PersonaSelector({ value, onChange }: Props) {
     <div className="persona-list">
       {personas.map((p) => (
         <div
-          key={p}
-          className={`persona-row ${value === p ? "selected" : ""}`}
-          onClick={() => onChange(p)}
+          key={p.name}
+          className={`persona-row ${value === p.name ? "selected" : ""}`}
+          onClick={() => onChange(p.name)}
         >
           <div className="persona-row-left">
             <div className="persona-name-row">
               <div className="persona-dot" />
-              <span className="persona-name">
-                {PERSONA_LABELS[p] || p}
-              </span>
+              <span className="persona-name">{p.label}</span>
             </div>
-            <span className="persona-desc">
-              {PERSONA_DESCS[p] || ""}
-            </span>
+            <span className="persona-desc">{p.description}</span>
           </div>
           <div className="persona-row-right">
-            {value === p && (
+            {value === p.name && (
               <span className="persona-selected-label">SELECTED</span>
             )}
             <span className="persona-meta">
-              {fileCounts[p]
-                ? `${fileCounts[p].dir} · ${fileCounts[p].count}`
+              {fileCounts[p.name]
+                ? `${fileCounts[p.name].dir} · ${fileCounts[p.name].count}`
                 : ""}
             </span>
           </div>

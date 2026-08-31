@@ -14,7 +14,7 @@ Built on [Pipecat](https://github.com/pipecat-ai/pipecat) + Gemini Live + SmallW
 
 - **Voice-first**: speak naturally, get spoken responses
 - **Personas**: switch roles (Thinking Partner, Devil's Advocate, Note Taker, SRE Assistant) with different instructions and tool sets
-- **10 built-in tools**: web search, web read, file read/write/list, deep analysis (Gemini 3.7 Flash), research, session summary, NotebookLM sync, current time
+- **11 built-in tools**: web search, web read, file read/write/list, deep analysis (Gemini 3.7 Flash), research, session summary, NotebookLM sync, current time
 - **MCP integration**: connect external tool servers (Red Hat API, Jira) with read-only enforcement
 - **Per-persona output**: each persona writes to its own folder
 - **Session continuity**: past sessions saved as markdown, continue any session with full context injected

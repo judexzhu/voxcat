@@ -933,6 +933,21 @@ voice:
 | `split.tts_voice` | string | falls back to `name` | Voice for split mode TTS. Overrides `voice.name` |
 | `split.tts_style` | string | none | TTS style tag: `"extremely fast"`, `"whispering"`, `"shouting"`, `"sarcasm"`, `"robotic"`, or omit for default |
 
+### tools
+
+Model configuration for deep_analysis, research, and summarize_session tools.
+
+```yaml
+tools:
+  analysis_model: "gemini-3.7-flash"
+  thinking_budget: 8192
+```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `analysis_model` | string | `"gemini-3.7-flash"` | Model used for deep analysis, research, and summarization |
+| `thinking_budget` | integer | `8192` | Thinking token budget for analysis tools |
+
 ### mcp_servers
 
 MCP server definitions. See [MCP Integration](#11-mcp-integration) for details.
@@ -955,10 +970,10 @@ Controls persona definitions and shared behavior.
 ```yaml
 persona:
   default: "thinking-partner"
-  common_instruction: |
-    Shared instructions for all personas...
   profiles:
     persona-slug:
+      label: "Display Name"
+      description: "One-line description shown on landing page."
       instruction: |
         Persona-specific instructions...
       silent: false
@@ -971,13 +986,16 @@ persona:
         directory: "output/persona-slug"
 ```
 
+Tool routing instructions (e.g. "call web_search for factual questions") are assembled automatically based on which tools are actually registered. Only tools with valid API keys get routing lines in the system prompt.
+
 | Field | Type | Description |
 | --- | --- | --- |
 | `default` | string | Persona slug used when none is specified |
-| `common_instruction` | string | Instructions appended to every persona's instruction |
 | `profiles` | map | Persona definitions keyed by slug |
+| `profiles.<slug>.label` | string | Display name in the UI (defaults to slug in title case) |
+| `profiles.<slug>.description` | string | One-line description shown on the landing page |
 | `profiles.<slug>.instruction` | string | System prompt for this persona |
-| `profiles.<slug>.silent` | boolean | If `true`, skips TTS output (split mode only) |
+| `profiles.<slug>.silent` | boolean | If `true`, skips TTS output. Auto-switches to split mode if live. |
 | `profiles.<slug>.tools.builtin` | list | Built-in tool names to enable |
 | `profiles.<slug>.tools.mcp_servers` | list | MCP server names this persona can access |
 | `profiles.<slug>.output.directory` | string | File output path relative to project root |

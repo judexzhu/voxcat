@@ -41,11 +41,11 @@ def test_all_builtin_tools_register(tmp_path):
     try:
         all_names = [
             "websearch", "web_read", "file_read", "file_write", "file_list",
-            "summarize_session", "get_current_time", "deep_analysis", "research",
-            "notebooklm_sync",
+            "set_topic", "summarize_session", "get_current_time", "deep_analysis",
+            "research", "notebooklm_sync",
         ]
         tools = build_tools(all_names, str(tmp_path), recorder)
-        assert len(tools) == 10
+        assert len(tools) == 11
     finally:
         del os.environ["TAVILY_API_KEY"]
         del os.environ["NOTEBOOKLM_NOTEBOOK_ID"]

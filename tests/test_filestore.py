@@ -26,3 +26,15 @@ def test_nonexistent_file_still_resolves(tmp_path):
     result = safe_resolve(tmp_path, "doesnt-exist.md")
     assert result is not None
     assert result == tmp_path / "doesnt-exist.md"
+
+
+def test_sibling_prefix_returns_none(tmp_path):
+    sibling = tmp_path.parent / (tmp_path.name + "-evil")
+    sibling.mkdir()
+    result = safe_resolve(tmp_path, f"../{sibling.name}/secret.md")
+    assert result is None
+
+
+def test_absolute_path_returns_none(tmp_path):
+    result = safe_resolve(tmp_path, "/etc/passwd")
+    assert result is None

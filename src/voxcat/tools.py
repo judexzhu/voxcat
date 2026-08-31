@@ -9,6 +9,9 @@ from pipecat.services.llm_service import FunctionCallParams
 from .filestore import safe_resolve
 from .transcript import TranscriptRecorder
 
+_analysis_model = "gemini-3.7-flash"
+_thinking_budget = 8192
+
 
 async def web_search_handler(params: FunctionCallParams):
     from tavily import AsyncTavilyClient
@@ -41,10 +44,10 @@ async def deep_analysis_handler(params: FunctionCallParams):
     client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
     prompt = f"{query}\n\nContext:\n{context}" if context else query
     response = await client.aio.models.generate_content(
-        model="gemini-3.7-flash",
+        model=_analysis_model,
         contents=prompt,
         config=genai.types.GenerateContentConfig(
-            thinking_config=genai.types.ThinkingConfig(thinking_budget=8192),
+            thinking_config=genai.types.ThinkingConfig(thinking_budget=_thinking_budget),
         ),
     )
     await params.result_callback({"analysis": response.text[:5000]})
@@ -86,10 +89,10 @@ async def research_handler(params: FunctionCallParams):
 
     client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
     response = await client.aio.models.generate_content(
-        model="gemini-3.7-flash",
+        model=_analysis_model,
         contents=prompt,
         config=genai.types.GenerateContentConfig(
-            thinking_config=genai.types.ThinkingConfig(thinking_budget=8192),
+            thinking_config=genai.types.ThinkingConfig(thinking_budget=_thinking_budget),
         ),
     )
     await params.result_callback({"report": response.text[:5000]})
@@ -114,8 +117,13 @@ async def notebooklm_sync_handler(params: FunctionCallParams):
 
 def build_tools(
     builtin_tools: list[str], output_dir: str, recorder: TranscriptRecorder,
+    tools_config: dict | None = None,
 ) -> list[FunctionSchema]:
+    global _analysis_model, _thinking_budget
     output_path = Path(output_dir).resolve()
+    _tc = tools_config or {}
+    _analysis_model = _tc.get("analysis_model", "gemini-3.7-flash")
+    _thinking_budget = _tc.get("thinking_budget", 8192)
 
     async def web_read_handler(params: FunctionCallParams):
         from tavily import AsyncTavilyClient
@@ -139,6 +147,8 @@ def build_tools(
             return
         await params.result_callback({"filename": filename, "content": path.read_text()[:5000]})
 
+    ALLOWED_EXTENSIONS = {".md", ".txt", ".json", ".yaml", ".yml"}
+
     async def file_write_handler(params: FunctionCallParams):
         filename = params.arguments["filename"]
         content = params.arguments["content"]
@@ -146,13 +156,19 @@ def build_tools(
         if not path:
             await params.result_callback({"error": "Access denied: path outside output directory"})
             return
+        if path.suffix.lower() not in ALLOWED_EXTENSIONS:
+            await params.result_callback({"error": f"Extension not allowed. Use: {', '.join(sorted(ALLOWED_EXTENSIONS))}"})
+            return
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
         logger.info(f"File written: {path}")
         await params.result_callback({"status": "saved", "path": str(path), "content": content[:3000]})
 
     async def file_list_handler(params: FunctionCallParams):
-        files = sorted(output_path.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
+        files = sorted(
+            (f for f in output_path.glob("*") if f.is_file()),
+            key=lambda f: f.stat().st_mtime, reverse=True,
+        )
         entries = [{"name": f.name, "size": f.stat().st_size} for f in files[:20]]
         await params.result_callback({"directory": str(output_path), "files": entries})
 
@@ -165,7 +181,7 @@ def build_tools(
             return
         client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
         response = await client.aio.models.generate_content(
-            model="gemini-3.7-flash",
+            model=_analysis_model,
             contents=f"Summarize this conversation transcript into markdown with these sections:\n"
             f"## Key Ideas\n## Decisions Made\n## Action Items\n## Open Questions\n\n"
             f"Be concise. Use bullet points.\n\nTranscript:\n{transcript[:10000]}",
