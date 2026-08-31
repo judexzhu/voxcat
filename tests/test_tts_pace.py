@@ -1,39 +1,44 @@
-from pipecat.frames.frames import TextFrame
-from pipecat.processors.frame_processor import FrameDirection
+from unittest.mock import AsyncMock, MagicMock
 
-from voxcat.bot import TTSPaceProcessor
-
-
-async def test_prepends_tag_to_first_frame():
-    proc = TTSPaceProcessor("fast")
-    frame = TextFrame(text="Hello world")
-    await proc.process_frame(frame, FrameDirection.DOWNSTREAM)
-    assert frame.text == "[fast] Hello world"
+from voxcat.bot import apply_tts_style
 
 
-async def test_no_tag_on_subsequent_frames():
-    proc = TTSPaceProcessor("fast")
-    f1 = TextFrame(text="First")
-    f2 = TextFrame(text="Second")
-    await proc.process_frame(f1, FrameDirection.DOWNSTREAM)
-    await proc.process_frame(f2, FrameDirection.DOWNSTREAM)
-    assert f2.text == "Second"
+async def test_applies_style_tag_to_every_call():
+    results = []
+
+    async def mock_run_tts(text, context_id):
+        results.append(text)
+        return
+        yield  # make it an async generator
+
+    tts = MagicMock()
+    tts.run_tts = mock_run_tts
+
+    apply_tts_style(tts, "extremely fast")
+
+    async for _ in tts.run_tts("Hello world.", "ctx1"):
+        pass
+    async for _ in tts.run_tts("Second sentence.", "ctx2"):
+        pass
+
+    assert results[0] == "[extremely fast] Hello world."
+    assert results[1] == "[extremely fast] Second sentence."
 
 
-async def test_resets_on_empty_text():
-    proc = TTSPaceProcessor("slow")
-    f1 = TextFrame(text="Sentence one.")
-    f2 = TextFrame(text="")
-    f3 = TextFrame(text="Sentence two.")
-    await proc.process_frame(f1, FrameDirection.DOWNSTREAM)
-    await proc.process_frame(f2, FrameDirection.DOWNSTREAM)
-    await proc.process_frame(f3, FrameDirection.DOWNSTREAM)
-    assert f1.text == "[slow] Sentence one."
-    assert f3.text == "[slow] Sentence two."
+async def test_skips_empty_text():
+    results = []
 
+    async def mock_run_tts(text, context_id):
+        results.append(text)
+        return
+        yield
 
-async def test_custom_pace_tag():
-    proc = TTSPaceProcessor("medium")
-    frame = TextFrame(text="Test")
-    await proc.process_frame(frame, FrameDirection.DOWNSTREAM)
-    assert frame.text == "[medium] Test"
+    tts = MagicMock()
+    tts.run_tts = mock_run_tts
+
+    apply_tts_style(tts, "whispering")
+
+    async for _ in tts.run_tts("  ", "ctx1"):
+        pass
+
+    assert results[0] == "  "

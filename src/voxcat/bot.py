@@ -22,6 +22,7 @@ from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 from pipecat.workers.runner import WorkerRunner
 
 import json
+import re
 from datetime import datetime
 
 from pipecat.frames.frames import FunctionCallResultFrame, TextFrame
@@ -62,24 +63,18 @@ class ResultSpillProcessor(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
-class TTSPaceProcessor(FrameProcessor):
-    """Prepends a pace tag like [fast] to text frames heading to TTS."""
+def apply_tts_style(tts_service, style: str):
+    """Monkey-patch run_tts to prepend a style tag to every sentence."""
+    tag = f"[{style}] "
+    original_run = tts_service.run_tts
 
-    def __init__(self, pace: str = "fast"):
-        super().__init__()
-        self._tag = f"[{pace}] "
-        self._first = True
+    async def styled_run_tts(text, context_id):
+        if text.strip():
+            text = tag + text
+        async for frame in original_run(text, context_id):
+            yield frame
 
-    async def process_frame(self, frame, direction):
-        await super().process_frame(frame, direction)
-        if isinstance(frame, TextFrame) and direction == FrameDirection.DOWNSTREAM:
-            if self._first:
-                frame.text = self._tag + frame.text
-                self._first = False
-            # Reset on empty text (sentence boundary)
-            if not frame.text.strip():
-                self._first = True
-        await self.push_frame(frame, direction)
+    tts_service.run_tts = styled_run_tts
 
 
 _config = None
@@ -109,7 +104,6 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     common = config["persona"].get("common_instruction", "")
     system_instruction = persona["instruction"] + "\n" + common if common else persona["instruction"]
     voice_config = config["voice"]
-    voice = voice_config["name"]
     voice_mode = voice_config.get("mode", "live")
     output_dir = persona.get("output", {}).get("directory", "brainstorms")
     builtin_tools = persona.get("tools", {}).get("builtin", [])
@@ -165,11 +159,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             tts = GeminiTTSService(
                 api_key=api_key,
                 model=split_config.get("tts_model", "gemini-3.1-flash-tts-preview"),
-                voice_id=split_config.get("tts_voice", voice),
+                voice_id=split_config.get("tts_voice", "Aoede"),
             )
 
-            tts_pace = split_config.get("tts_pace", "fast")
-            pace_proc = TTSPaceProcessor(tts_pace) if tts_pace else None
+            tts_style = split_config.get("tts_style")
+            if tts_style:
+                apply_tts_style(tts, tts_style)
 
             pipeline = Pipeline([
                 transport.input(),
@@ -177,7 +172,6 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 user_aggregator,
                 llm,
                 result_spill,
-                *([pace_proc] if pace_proc else []),
                 tts,
                 transport.output(),
                 assistant_aggregator,
@@ -185,10 +179,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     else:
         llm = GeminiLiveLLMService(
             api_key=os.environ["GOOGLE_API_KEY"],
-            model=voice_config.get("live_model"),
+            model=voice_config.get("live", {}).get("model", "gemini-3.1-flash-live-preview"),
             settings=GeminiLiveLLMService.Settings(
                 system_instruction=system_instruction,
-                voice=voice,
+                voice=voice_config.get("live", {}).get("voice", "Aoede"),
             ),
         )
 
@@ -254,11 +248,21 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         timestamp = f"[{message.timestamp}] " if message.timestamp else ""
         logger.info(f"Transcript: {timestamp}user: {message.content}")
 
+    _style_tag_re = re.compile(r"\[(?:extremely fast|whispering|shouting|sarcasm|robotic)\]\s?")
+
     @assistant_aggregator.event_handler("on_assistant_turn_stopped")
     async def on_assistant_turn_stopped(aggregator, message: AssistantTurnStoppedMessage):
-        recorder.add_turn("assistant", message.content, message.timestamp)
+        clean = _style_tag_re.sub("", message.content)
+        recorder.add_turn("assistant", clean, message.timestamp)
         timestamp = f"[{message.timestamp}] " if message.timestamp else ""
-        logger.info(f"Transcript: {timestamp}assistant: {message.content}")
+        logger.info(f"Transcript: {timestamp}assistant: {clean}")
+        # Strip style tags from LLM context so model doesn't reproduce them
+        for msg in context.messages:
+            if not isinstance(msg, dict):
+                continue
+            for part in msg.get("parts", []):
+                if isinstance(part, dict) and "text" in part and _style_tag_re.search(part["text"]):
+                    part["text"] = _style_tag_re.sub("", part["text"])
 
     await runner.run()
 

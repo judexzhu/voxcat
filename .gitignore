@@ -7,7 +7,5 @@ __pycache__/
 output/
 sessions/
 client/node_modules/
-# client/dist/ is committed — no Node.js needed to run
-# src/voxcat/client/dist/ is a copy for packaging — rebuilt by setup.sh
-src/voxcat/client/
+# src/voxcat/client/dist/ is committed — packaged with uv tool install
 *.tsbuildinfo

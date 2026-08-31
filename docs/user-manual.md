@@ -628,18 +628,17 @@ voice:
   mode: "split"
   split:
     stt_model: "gemini-3.5-transcribe-live"
-    llm_model: "gemini-3.6-flash"
+    llm_model: "gemini-3.7-flash"
     tts_model: "gemini-3.1-flash-tts-preview"
-    tts_voice: "Kore"
-    tts_pace: "fast"
+    tts_voice: "Aoede"
 ```
 
 **Pipeline:**
 
 ```
 Microphone -> Gemini 3.5 Transcribe Live (STT)
-           -> Gemini 3.6 Flash (LLM + tool calls)
-           -> TTSPaceProcessor (optional speed tag)
+           -> Gemini 3.7 Flash (LLM + tool calls)
+           -> TTSStyleProcessor (optional style tag)
            -> Gemini 3.1 Flash TTS (text-to-speech)
            -> Speaker
 ```
@@ -652,17 +651,21 @@ Three separate models handle each stage independently.
 - Supports silent mode (the Note Taker persona skips the TTS stage entirely)
 - Text appears in the timeline before audio finishes (the "read-ahead" effect) because `BotLlmText` events arrive as the LLM generates text, before TTS processes it
 - Each model can be individually configured and upgraded
-- The voice is set by `split.tts_voice` (overrides `voice.name`)
+- The voice is set by `split.tts_voice`
 
-**TTS pace control:**
+**TTS style control:**
 
-The `tts_pace` option prepends a speed tag to text before it reaches the TTS model:
+The `tts_style` option prepends a Gemini TTS style tag to the start of each response. Available styles:
 
-- `"fast"` prepends `[fast]` to each sentence
-- `"slow"` prepends `[slow]` to each sentence
-- Omit the field for default speed
+| Style | Effect |
+| --- | --- |
+| `extremely fast` | Speeds up speech, ideal for fast-paced dialogue |
+| `whispering` | Quiet, whispering delivery |
+| `shouting` | Loud, shouting delivery |
+| `sarcasm` | Sarcastic tone |
+| `robotic` | Robotic voice |
 
-This is implemented by `TTSPaceProcessor`, a Pipecat `FrameProcessor` that modifies `TextFrame` content in the pipeline.
+Omit the field for default delivery. Style tags affect all subsequent speech in the response.
 
 ### Choosing Between Modes
 
@@ -903,8 +906,10 @@ voice:
   mode: "split"
   live_model: "gemini-3.1-flash-live-preview"
   split:
+    stt_engine: "gemini"
     stt_model: "gemini-3.5-transcribe-live"
-    llm_model: "gemini-3.6-flash"
+    whisper_model: "mlx-community/whisper-large-v3-turbo"
+    llm_model: "gemini-3.7-flash"
     tts_model: "gemini-3.1-flash-tts-preview"
     tts_voice: "Kore"
     tts_pace: "fast"
@@ -919,7 +924,7 @@ voice:
 | `split.llm_model` | string | `"gemini-3.7-flash"` | Language model for split mode (reasoning + tool calls) |
 | `split.tts_model` | string | `"gemini-3.1-flash-tts-preview"` | Text-to-speech model for split mode |
 | `split.tts_voice` | string | falls back to `name` | Voice for split mode TTS. Overrides `voice.name` |
-| `split.tts_pace` | string | none | Speech speed. `"fast"`, `"slow"`, or omit for default |
+| `split.tts_style` | string | none | TTS style tag: `"extremely fast"`, `"whispering"`, `"shouting"`, `"sarcasm"`, `"robotic"`, or omit for default |
 
 ### mcp_servers
 

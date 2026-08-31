@@ -175,6 +175,13 @@ function SessionView({
     if (fileWriteCount > 0) setTreeKey((k) => k + 1);
   }, [fileWriteCount]);
 
+  // Auto-refresh output tree when session ends (transcript saved server-side)
+  useEffect(() => {
+    if (ended) {
+      setTimeout(() => setTreeKey((k) => k + 1), 1000);
+    }
+  }, [ended]);
+
   return (
     <div className="session">
       {/* Rail */}

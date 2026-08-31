@@ -1,15 +1,16 @@
 # Voxcat Configuration
 
 voice:
-  name: "Aoede" # Options: Puck, Charon, Kore, Fenrir, Aoede
   mode: "split" # "live" = all-in-one Gemini Live, "split" = separate STT + LLM + TTS
-  live_model: "gemini-3.1-flash-live-preview"
+  live:
+    model: "gemini-3.1-flash-live-preview"
+    voice: "Aoede" # Options: Puck, Charon, Kore, Fenrir, Aoede
   split:
     stt_model: "gemini-3.5-transcribe-live"
     llm_model: "gemini-3.7-flash"
     tts_model: "gemini-3.1-flash-tts-preview"
-    tts_voice: "Kore"
-    tts_pace: "fast" # Options: slow, fast, or remove for default pace
+    tts_voice: "Aoede" # Options: Puck, Charon, Kore, Fenrir, Aoede
+    # tts_style: "extremely fast" # Options: extremely fast, whispering, shouting, sarcasm, robotic. Remove for default.
 
 # MCP servers — add your own here. Each server needs: command, args, cwd, env_keys, read_only_tools.
 # Example:
@@ -36,6 +37,7 @@ persona:
     User says "research" or "look into" → call research. It searches, reads sources, and synthesizes a report.
     Factual question → call web_search. Never guess.
     URL in search results looks useful → call web_read on it.
+    After the first substantive exchange, call set_topic with a short descriptive slug for this session (e.g. "ai-sre-exploration"). Do this once, silently — don't announce it.
     User says "wrap up", "summarize", "done", "that's all for today" → call summarize_session. It saves the summary silently — don't read it aloud, just confirm it's saved.
     User says "sync to notebook", "push to NotebookLM", or "archive this" → call notebooklm_sync with the content.
   profiles:
@@ -52,6 +54,7 @@ persona:
             file_read,
             file_write,
             file_list,
+            set_topic,
             summarize_session,
             get_current_time,
             deep_analysis,
@@ -74,6 +77,7 @@ persona:
             file_read,
             file_write,
             file_list,
+            set_topic,
             summarize_session,
             get_current_time,
             deep_analysis,
@@ -100,6 +104,7 @@ persona:
             file_read,
             file_write,
             file_list,
+            set_topic,
             summarize_session,
             get_current_time,
             deep_analysis,
@@ -127,6 +132,7 @@ persona:
             file_read,
             file_write,
             file_list,
+            set_topic,
             summarize_session,
             get_current_time,
             deep_analysis,

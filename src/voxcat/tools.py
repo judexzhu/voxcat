@@ -220,6 +220,18 @@ def build_tools(
         description="Get the current session transcript for summarization. Summarize into: Key Ideas, Decisions Made, Action Items, and Open Questions",
         properties={}, required=[], handler=summarize_handler,
     )
+    async def set_topic_handler(params: FunctionCallParams):
+        topic = params.arguments["topic"]
+        recorder.set_topic(topic)
+        logger.info(f"Session topic set: {topic}")
+        await params.result_callback({"status": "ok", "topic": topic})
+
+    available["set_topic"] = FunctionSchema(
+        name="set_topic",
+        description="Set the session topic. This names the transcript and output files. Call once after the first substantive exchange with a short descriptive slug like 'ai-sre-exploration' or 'k8s-migration-plan'.",
+        properties={"topic": {"type": "string", "description": "Short descriptive slug for this session (lowercase, hyphens, no spaces)"}},
+        required=["topic"], handler=set_topic_handler,
+    )
     available["get_current_time"] = FunctionSchema(
         name="get_current_time",
         description="Get the current date and time",

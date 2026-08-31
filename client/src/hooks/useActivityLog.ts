@@ -20,7 +20,8 @@ export function useActivityLog() {
     }
   });
 
-  const appendBotText = useCallback((text: string) => {
+  const appendBotText = useCallback((raw: string) => {
+    const text = raw.replace(/\[(?:extremely fast|whispering|shouting|sarcasm|robotic)\]\s?/g, "");
     setEntries((prev) => {
       if (botIndex.current >= 0 && botIndex.current < prev.length) {
         const updated = [...prev];
