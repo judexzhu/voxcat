@@ -81,8 +81,14 @@ uv run voxcat            # backend on :7860
 ## Tests
 
 ```bash
-uv run pytest -v
+uv run pytest tests/ -v         # run all tests
+uv run pytest tests/test_filestore.py -v   # run one file
 ```
+
+Key test files:
+- `tests/test_filestore.py` — path traversal prevention (sibling prefix, absolute path)
+- `tests/test_build_tools.py` — tool registration, API key gating, full tool count
+- `tests/test_tts_pace.py` — TTS style tag prepending
 
 ## Code Style
 

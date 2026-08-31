@@ -126,8 +126,29 @@ def main():
     # Make config available to bot.run_bot() when called by pipecat runner
     set_config(config)
 
+    from fastapi import HTTPException
     from fastapi.staticfiles import StaticFiles
     from pipecat.runner.run import app, main as pipecat_main
+
+    def _persona_dir(persona: str) -> Path:
+        profile = config["persona"]["profiles"].get(persona)
+        if not profile:
+            raise HTTPException(status_code=404, detail=f"Unknown persona: {persona}")
+        return Path(profile.get("output", {}).get("directory", f"output/{persona}"))
+
+    def _persona_label(name: str) -> str:
+        return config["persona"]["profiles"][name].get("label", name.replace("-", " ").title())
+
+    def _list_files(directory: Path, limit: int = 50) -> list[dict]:
+        directory.mkdir(parents=True, exist_ok=True)
+        files = sorted(
+            (f for f in directory.glob("*") if f.is_file() and not f.name.startswith(".")),
+            key=lambda f: f.stat().st_mtime, reverse=True,
+        )
+        return [
+            {"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
+            for f in files[:limit]
+        ]
 
     @app.get("/api/personas")
     async def list_personas():
@@ -136,7 +157,7 @@ def main():
             profile = config["persona"]["profiles"][name]
             personas.append({
                 "name": name,
-                "label": profile.get("label", name.replace("-", " ").title()),
+                "label": _persona_label(name),
                 "description": profile.get("description", ""),
             })
         return {"personas": personas, "default": config["persona"]["default"]}
@@ -145,44 +166,22 @@ def main():
     async def file_tree():
         tree = []
         for name in available_personas:
-            profile = config["persona"]["profiles"][name]
-            output_dir = Path(profile.get("output", {}).get("directory", f"output/{name}"))
-            output_dir.mkdir(parents=True, exist_ok=True)
-            files = sorted(
-                (f for f in output_dir.glob("*") if f.is_file() and not f.name.startswith(".")),
-                key=lambda f: f.stat().st_mtime, reverse=True,
-            )
+            output_dir = _persona_dir(name)
             tree.append({
                 "persona": name,
-                "label": profile.get("label", name.replace("-", " ").title()),
-                "files": [
-                    {"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
-                    for f in files[:50] if f.is_file()
-                ],
+                "label": _persona_label(name),
+                "files": _list_files(output_dir),
             })
         return {"tree": tree}
 
     @app.get("/api/files")
     async def list_files(persona: str = "thinking-partner"):
-        profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
-        output_dir.mkdir(parents=True, exist_ok=True)
-        files = sorted(
-            (f for f in output_dir.glob("*") if f.is_file() and not f.name.startswith(".")),
-            key=lambda f: f.stat().st_mtime, reverse=True,
-        )
-        return {
-            "directory": str(output_dir),
-            "files": [
-                {"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
-                for f in files[:50] if f.is_file()
-            ],
-        }
+        output_dir = _persona_dir(persona)
+        return {"directory": str(output_dir), "files": _list_files(output_dir)}
 
     @app.get("/api/files/{filename:path}")
     async def read_file(filename: str, persona: str = "thinking-partner"):
-        profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
+        output_dir = _persona_dir(persona)
         path = safe_resolve(output_dir, filename)
         if not path or not path.exists():
             return {"error": "File not found"}
@@ -193,8 +192,7 @@ def main():
 
     @app.delete("/api/files/{filename:path}")
     async def delete_file(filename: str, persona: str = "thinking-partner"):
-        profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
+        output_dir = _persona_dir(persona)
         path = safe_resolve(output_dir, filename)
         if not path or not path.exists():
             return {"error": "File not found"}
@@ -203,8 +201,7 @@ def main():
 
     @app.post("/api/files/{filename:path}/rename")
     async def rename_file(filename: str, new_name: str, persona: str = "thinking-partner"):
-        profile = config["persona"]["profiles"].get(persona, {})
-        output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
+        output_dir = _persona_dir(persona)
         path = safe_resolve(output_dir, filename)
         if not path or not path.exists():
             return {"error": "File not found"}

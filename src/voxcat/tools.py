@@ -9,9 +9,6 @@ from pipecat.services.llm_service import FunctionCallParams
 from .filestore import safe_resolve
 from .transcript import TranscriptRecorder
 
-_analysis_model = "gemini-3.7-flash"
-_thinking_budget = 8192
-
 
 async def web_search_handler(params: FunctionCallParams):
     from tavily import AsyncTavilyClient
@@ -35,69 +32,6 @@ async def get_current_time_handler(params: FunctionCallParams):
     })
 
 
-async def deep_analysis_handler(params: FunctionCallParams):
-    from google import genai
-
-    query = params.arguments["query"]
-    context = params.arguments.get("context", "")
-    logger.info(f"DeepAnalysis: {query[:100]}")
-    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
-    prompt = f"{query}\n\nContext:\n{context}" if context else query
-    response = await client.aio.models.generate_content(
-        model=_analysis_model,
-        contents=prompt,
-        config=genai.types.GenerateContentConfig(
-            thinking_config=genai.types.ThinkingConfig(thinking_budget=_thinking_budget),
-        ),
-    )
-    await params.result_callback({"analysis": response.text[:5000]})
-
-
-async def research_handler(params: FunctionCallParams):
-    from google import genai
-    from tavily import AsyncTavilyClient
-
-    topic = params.arguments["topic"]
-    logger.info(f"Research: {topic}")
-    tavily = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
-
-    search_response = await tavily.search(query=topic, max_results=5)
-    results = search_response.get("results", [])
-    logger.info(f"Research: found {len(results)} search results")
-
-    urls = [r["url"] for r in results[:3]]
-    extracted = []
-    if urls:
-        extract_response = await tavily.extract(urls=urls)
-        for r in extract_response.get("results", []):
-            extracted.append({"url": r["url"], "content": r["raw_content"][:3000]})
-    logger.info(f"Research: extracted {len(extracted)} pages")
-
-    sources_text = "\n\n".join(
-        f"Source: {e['url']}\n{e['content']}" for e in extracted
-    )
-    snippets_text = "\n".join(
-        f"- {r['title']}: {r['content'][:200]}" for r in results
-    )
-
-    prompt = (
-        f"Research topic: {topic}\n\n"
-        f"Search snippets:\n{snippets_text}\n\n"
-        f"Full page content:\n{sources_text}\n\n"
-        "Synthesize a structured research report with: Key Findings, Details, Sources, and Open Questions."
-    )
-
-    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
-    response = await client.aio.models.generate_content(
-        model=_analysis_model,
-        contents=prompt,
-        config=genai.types.GenerateContentConfig(
-            thinking_config=genai.types.ThinkingConfig(thinking_budget=_thinking_budget),
-        ),
-    )
-    await params.result_callback({"report": response.text[:5000]})
-
-
 async def notebooklm_sync_handler(params: FunctionCallParams):
     from notebooklm import NotebookLMClient
 
@@ -119,11 +53,10 @@ def build_tools(
     builtin_tools: list[str], output_dir: str, recorder: TranscriptRecorder,
     tools_config: dict | None = None,
 ) -> list[FunctionSchema]:
-    global _analysis_model, _thinking_budget
     output_path = Path(output_dir).resolve()
     _tc = tools_config or {}
-    _analysis_model = _tc.get("analysis_model", "gemini-3.7-flash")
-    _thinking_budget = _tc.get("thinking_budget", 8192)
+    analysis_model = _tc.get("analysis_model", "gemini-3.7-flash")
+    thinking_budget = _tc.get("thinking_budget", 8192)
 
     async def web_read_handler(params: FunctionCallParams):
         from tavily import AsyncTavilyClient
@@ -166,11 +99,72 @@ def build_tools(
 
     async def file_list_handler(params: FunctionCallParams):
         files = sorted(
-            (f for f in output_path.glob("*") if f.is_file()),
+            (f for f in output_path.glob("*") if f.is_file() and not f.name.startswith(".")),
             key=lambda f: f.stat().st_mtime, reverse=True,
         )
         entries = [{"name": f.name, "size": f.stat().st_size} for f in files[:20]]
         await params.result_callback({"directory": str(output_path), "files": entries})
+
+    async def deep_analysis_handler(params: FunctionCallParams):
+        from google import genai
+
+        query = params.arguments["query"]
+        context = params.arguments.get("context", "")
+        logger.info(f"DeepAnalysis: {query[:100]}")
+        client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        prompt = f"{query}\n\nContext:\n{context}" if context else query
+        response = await client.aio.models.generate_content(
+            model=analysis_model,
+            contents=prompt,
+            config=genai.types.GenerateContentConfig(
+                thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking_budget),
+            ),
+        )
+        await params.result_callback({"analysis": response.text[:5000]})
+
+    async def research_handler(params: FunctionCallParams):
+        from google import genai
+        from tavily import AsyncTavilyClient
+
+        topic = params.arguments["topic"]
+        logger.info(f"Research: {topic}")
+        tavily = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+
+        search_response = await tavily.search(query=topic, max_results=5)
+        results = search_response.get("results", [])
+        logger.info(f"Research: found {len(results)} search results")
+
+        urls = [r["url"] for r in results[:3]]
+        extracted = []
+        if urls:
+            extract_response = await tavily.extract(urls=urls)
+            for r in extract_response.get("results", []):
+                extracted.append({"url": r["url"], "content": r["raw_content"][:3000]})
+        logger.info(f"Research: extracted {len(extracted)} pages")
+
+        sources_text = "\n\n".join(
+            f"Source: {e['url']}\n{e['content']}" for e in extracted
+        )
+        snippets_text = "\n".join(
+            f"- {r['title']}: {r['content'][:200]}" for r in results
+        )
+
+        prompt = (
+            f"Research topic: {topic}\n\n"
+            f"Search snippets:\n{snippets_text}\n\n"
+            f"Full page content:\n{sources_text}\n\n"
+            "Synthesize a structured research report with: Key Findings, Details, Sources, and Open Questions."
+        )
+
+        client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        response = await client.aio.models.generate_content(
+            model=analysis_model,
+            contents=prompt,
+            config=genai.types.GenerateContentConfig(
+                thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking_budget),
+            ),
+        )
+        await params.result_callback({"report": response.text[:5000]})
 
     async def summarize_handler(params: FunctionCallParams):
         from google import genai
@@ -181,7 +175,7 @@ def build_tools(
             return
         client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
         response = await client.aio.models.generate_content(
-            model=_analysis_model,
+            model=analysis_model,
             contents=f"Summarize this conversation transcript into markdown with these sections:\n"
             f"## Key Ideas\n## Decisions Made\n## Action Items\n## Open Questions\n\n"
             f"Be concise. Use bullet points.\n\nTranscript:\n{transcript[:10000]}",
