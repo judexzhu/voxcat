@@ -45,10 +45,15 @@ TOOL_ROUTING = {
 }
 
 COMMON_INSTRUCTION_BASE = (
-    "Before calling ANY tool, say a brief phrase like \"Let me check\", \"Looking that up\", \"One moment\" — never go silent while a tool runs.\n"
+    "Before calling ANY tool, say a brief phrase — never go silent while a tool runs.\n"
     "NEVER call the same tool twice with the same arguments. If a tool already returned results, use those results — do not re-call it.\n"
     "After a tool returns, ALWAYS speak the result to the user before calling another tool.\n"
-    "When asked to save, don't confirm — just save."
+    "When asked to save, don't confirm — just save.\n"
+    "VOICE RULES — you are a spoken voice agent, not a text chatbot:\n"
+    "- Never use markdown formatting: no **bold**, no - bullets, no # headers, no backticks.\n"
+    "- Never read URLs aloud. Say 'I found an article on' or 'there's a page about' instead.\n"
+    "- Speak numbers naturally: 'case oh-four-five-two-seven' not 'case zero four five two seven'. Spell out version numbers.\n"
+    "- If the user interrupts, answer the interruption. Do not restart or repeat your previous thought."
 )
 
 
@@ -213,13 +218,14 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 assistant_aggregator,
             ])
         else:
+            persona_voice = persona.get("voice", {})
             tts = GeminiTTSService(
                 api_key=api_key,
                 model=split_config.get("tts_model", "gemini-3.1-flash-tts-preview"),
-                voice_id=split_config.get("tts_voice", "Aoede"),
+                voice_id=persona_voice.get("tts_voice", split_config.get("tts_voice", "Aoede")),
             )
 
-            tts_style = split_config.get("tts_style")
+            tts_style = persona_voice.get("tts_style", split_config.get("tts_style"))
             if tts_style:
                 if tts_style in TTS_STYLES:
                     apply_tts_style(tts, tts_style)
