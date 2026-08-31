@@ -194,13 +194,13 @@ def build_tools(
     if os.environ.get("TAVILY_API_KEY"):
         available["websearch"] = FunctionSchema(
             name="web_search",
-            description="Search the web for real-time information, documentation, or any topic",
+            description="Search the web for real-time information. Call this for any factual question — never guess.",
             properties={"query": {"type": "string", "description": "Search query"}},
             required=["query"], handler=web_search_handler,
         )
         available["web_read"] = FunctionSchema(
             name="web_read",
-            description="Read and extract the full content of a web page given its URL",
+            description="Read and extract the full content of a web page. Call when a URL in search results looks useful.",
             properties={"url": {"type": "string", "description": "URL to read"}},
             required=["url"], handler=web_read_handler,
         )
@@ -227,7 +227,7 @@ def build_tools(
     )
     available["summarize_session"] = FunctionSchema(
         name="summarize_session",
-        description="Get the current session transcript for summarization. Summarize into: Key Ideas, Decisions Made, Action Items, and Open Questions",
+        description="Summarize the session into Key Ideas, Decisions Made, Action Items, and Open Questions. Call when user says wrap up, summarize, done, or that's all. Saves silently — confirm it's saved, don't read it aloud.",
         properties={}, required=[], handler=summarize_handler,
     )
     async def set_topic_handler(params: FunctionCallParams):
@@ -238,18 +238,18 @@ def build_tools(
 
     available["set_topic"] = FunctionSchema(
         name="set_topic",
-        description="Set the session topic. This names the transcript and output files. Call once after the first substantive exchange with a short descriptive slug like 'ai-sre-exploration' or 'k8s-migration-plan'.",
+        description="Set the session topic — names transcript and output files. Call once silently after the first substantive exchange with a short slug like 'ai-sre-exploration'. Do not announce it.",
         properties={"topic": {"type": "string", "description": "Short descriptive slug for this session (lowercase, hyphens, no spaces)"}},
         required=["topic"], handler=set_topic_handler,
     )
     available["get_current_time"] = FunctionSchema(
         name="get_current_time",
-        description="Get the current date and time",
+        description="Get the current date and time. Call when the user asks what time it is.",
         properties={}, required=[], handler=get_current_time_handler,
     )
     available["deep_analysis"] = FunctionSchema(
         name="deep_analysis",
-        description="Send a complex question to a powerful reasoning model for deep analysis. Use for root cause analysis, complex troubleshooting, or when you need thorough reasoning",
+        description="Deep reasoning model for complex questions. Call for why, root cause, analyze, compare, trade-offs, or when the user says think deeper or analyze this.",
         properties={
             "query": {"type": "string", "description": "The question or analysis request"},
             "context": {"type": "string", "description": "Supporting context (case details, logs, error messages)"},
@@ -259,7 +259,7 @@ def build_tools(
     if os.environ.get("TAVILY_API_KEY"):
         available["research"] = FunctionSchema(
             name="research",
-            description="Research a topic thoroughly: search the web, read top sources, and synthesize a structured report with Key Findings, Details, Sources, and Open Questions. Takes 10-15 seconds.",
+            description="Research a topic thoroughly: search the web, read top sources, synthesize a report. Call when user says research or look into. Takes 10-15 seconds.",
             properties={
                 "topic": {"type": "string", "description": "The topic or question to research"},
             },
@@ -269,7 +269,7 @@ def build_tools(
     if os.environ.get("NOTEBOOKLM_NOTEBOOK_ID"):
         available["notebooklm_sync"] = FunctionSchema(
             name="notebooklm_sync",
-            description="Sync a document to Google NotebookLM as a text source. Use for archiving case reports, research findings, or session summaries to the knowledge base.",
+            description="Sync a document to Google NotebookLM. Call when user says sync to notebook, push to NotebookLM, or archive this.",
             properties={
                 "title": {"type": "string", "description": "Title of the document"},
                 "content": {"type": "string", "description": "Full markdown content to sync"},

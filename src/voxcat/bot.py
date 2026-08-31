@@ -32,19 +32,7 @@ from .mcp_connect import connect_mcp_servers
 from .tools import build_tools
 from .transcript import TranscriptRecorder
 
-TOOL_ROUTING = {
-    "deep_analysis": 'Questions with "why", "root cause", "analyze", "compare", "trade-offs" → ALWAYS call deep_analysis.\n'
-                     'User says "think deeper" or "analyze this" → call deep_analysis immediately.',
-    "research": 'User says "research" or "look into" → call research. It searches, reads sources, and synthesizes a report.',
-    "websearch": "Factual question → call web_search. Never guess.",
-    "web_read": "URL in search results looks useful → call web_read on it.",
-    "set_topic": 'After the first substantive exchange, call set_topic with a short descriptive slug for this session (e.g. "ai-sre-exploration"). Do this once, silently — don\'t announce it.',
-    "summarize_session": 'User says "wrap up", "summarize", "done", "that\'s all for today" → call summarize_session. It saves the summary silently — don\'t read it aloud, just confirm it\'s saved.',
-    "notebooklm_sync": 'User says "sync to notebook", "push to NotebookLM", or "archive this" → call notebooklm_sync with the content.',
-    "get_current_time": "When asked the time, call get_current_time.",
-}
-
-COMMON_INSTRUCTION_BASE = (
+COMMON_INSTRUCTION = (
     "Before calling ANY tool, say a brief phrase — never go silent while a tool runs.\n"
     "NEVER call the same tool twice with the same arguments. If a tool already returned results, use those results — do not re-call it.\n"
     "After a tool returns, ALWAYS speak the result to the user before calling another tool.\n"
@@ -55,14 +43,6 @@ COMMON_INSTRUCTION_BASE = (
     "- Speak numbers naturally: 'case oh-four-five-two-seven' not 'case zero four five two seven'. Spell out version numbers.\n"
     "- If the user interrupts, answer the interruption. Do not restart or repeat your previous thought."
 )
-
-
-def build_common_instruction(registered_tool_names: set[str]) -> str:
-    lines = [COMMON_INSTRUCTION_BASE]
-    for tool_key, routing_line in TOOL_ROUTING.items():
-        if tool_key in registered_tool_names:
-            lines.append(routing_line)
-    return "\n".join(lines)
 
 TTS_STYLES = ("extremely fast", "whispering", "shouting", "sarcasm", "robotic")
 
@@ -171,9 +151,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         mcp_tools, mcp_clients = await connect_mcp_servers(mcp_server_names, mcp_config)
         tools.extend(mcp_tools)
 
-    registered_names = set(builtin_tools) | {t.name for t in tools}
-    common = build_common_instruction(registered_names)
-    system_instruction = f"{common}\n\n{persona['instruction']}"
+    system_instruction = f"{COMMON_INSTRUCTION}\n\n{persona['instruction']}"
 
     is_silent = persona.get("silent", False)
     if is_silent and voice_mode == "live":
