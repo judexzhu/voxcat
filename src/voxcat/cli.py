@@ -148,7 +148,10 @@ def main():
             profile = config["persona"]["profiles"][name]
             output_dir = Path(profile.get("output", {}).get("directory", f"output/{name}"))
             output_dir.mkdir(parents=True, exist_ok=True)
-            files = sorted(output_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
+            files = sorted(
+                (f for f in output_dir.glob("*") if f.is_file() and not f.name.startswith(".")),
+                key=lambda f: f.stat().st_mtime, reverse=True,
+            )
             tree.append({
                 "persona": name,
                 "label": profile.get("label", name.replace("-", " ").title()),
@@ -164,7 +167,10 @@ def main():
         profile = config["persona"]["profiles"].get(persona, {})
         output_dir = Path(profile.get("output", {}).get("directory", "output/unknown"))
         output_dir.mkdir(parents=True, exist_ok=True)
-        files = sorted(output_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
+        files = sorted(
+            (f for f in output_dir.glob("*") if f.is_file() and not f.name.startswith(".")),
+            key=lambda f: f.stat().st_mtime, reverse=True,
+        )
         return {
             "directory": str(output_dir),
             "files": [
@@ -180,7 +186,10 @@ def main():
         path = safe_resolve(output_dir, filename)
         if not path or not path.exists():
             return {"error": "File not found"}
-        return {"filename": filename, "content": path.read_text()[:10000]}
+        try:
+            return {"filename": filename, "content": path.read_text()[:10000]}
+        except UnicodeDecodeError:
+            return {"error": "Binary file, cannot display"}
 
     @app.delete("/api/files/{filename:path}")
     async def delete_file(filename: str, persona: str = "thinking-partner"):
