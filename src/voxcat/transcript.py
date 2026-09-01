@@ -2,14 +2,12 @@ from datetime import datetime
 from pathlib import Path
 
 
-SESSIONS_DIR = Path("sessions")
-
-
 class TranscriptRecorder:
-    def __init__(self, output_dir: str, persona: str = ""):
+    def __init__(self, output_dir: str, persona: str = "", sessions_dir: str | Path = "sessions"):
         self._output_dir = Path(output_dir)
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._persona = persona
+        self._sessions_dir = Path(sessions_dir)
         self._turns: list[dict] = []
         self._session_start = datetime.now()
         self._topic = "untitled"
@@ -65,7 +63,7 @@ class TranscriptRecorder:
         return filepath
 
     def save_session(self, append_to: str | None = None) -> Path:
-        session_dir = SESSIONS_DIR / self._persona if self._persona else SESSIONS_DIR
+        session_dir = self._sessions_dir / self._persona if self._persona else self._sessions_dir
         session_dir.mkdir(parents=True, exist_ok=True)
 
         if append_to:

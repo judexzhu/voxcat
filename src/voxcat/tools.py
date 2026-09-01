@@ -52,18 +52,29 @@ async def notebooklm_sync_handler(params: FunctionCallParams):
 def build_tools(
     builtin_tools: list[str], output_dir: str, recorder: TranscriptRecorder,
     tools_config: dict | None = None,
+    tavily_client=None, genai_client=None,  # inject fakes for testing
 ) -> list[FunctionSchema]:
     output_path = Path(output_dir).resolve()
     _tc = tools_config or {}
     analysis_model = _tc.get("analysis_model", "gemini-3.7-flash")
     thinking_budget = _tc.get("thinking_budget", 8192)
 
-    async def web_read_handler(params: FunctionCallParams):
+    def _get_tavily():
+        if tavily_client:
+            return tavily_client
         from tavily import AsyncTavilyClient
+        return AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
+    def _get_genai():
+        if genai_client:
+            return genai_client
+        from google import genai
+        return genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+
+    async def web_read_handler(params: FunctionCallParams):
         url = params.arguments["url"]
         logger.info(f"WebRead: {url}")
-        client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+        client = _get_tavily()
         response = await client.extract(urls=[url])
         results = response.get("results", [])
         content = results[0]["raw_content"][:5000] if results else "Failed to extract content"
@@ -111,7 +122,7 @@ def build_tools(
         query = params.arguments["query"]
         context = params.arguments.get("context", "")
         logger.info(f"DeepAnalysis: {query[:100]}")
-        client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        client = _get_genai()
         prompt = f"{query}\n\nContext:\n{context}" if context else query
         response = await client.aio.models.generate_content(
             model=analysis_model,
@@ -124,11 +135,10 @@ def build_tools(
 
     async def research_handler(params: FunctionCallParams):
         from google import genai
-        from tavily import AsyncTavilyClient
 
         topic = params.arguments["topic"]
         logger.info(f"Research: {topic}")
-        tavily = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+        tavily = _get_tavily()
 
         search_response = await tavily.search(query=topic, max_results=5)
         results = search_response.get("results", [])
@@ -156,7 +166,7 @@ def build_tools(
             "Synthesize a structured research report with: Key Findings, Details, Sources, and Open Questions."
         )
 
-        client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        client = _get_genai()
         response = await client.aio.models.generate_content(
             model=analysis_model,
             contents=prompt,
@@ -173,7 +183,7 @@ def build_tools(
         if not transcript:
             await params.result_callback({"error": "No transcript recorded yet"})
             return
-        client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        client = _get_genai()
         response = await client.aio.models.generate_content(
             model=analysis_model,
             contents=f"Summarize this conversation transcript into markdown with these sections:\n"

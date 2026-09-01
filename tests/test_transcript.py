@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
 
 from voxcat.transcript import TranscriptRecorder
 
@@ -27,29 +26,27 @@ def test_save_transcript_creates_file(tmp_path):
 
 
 def test_save_session_creates_file(tmp_path):
-    with patch("voxcat.transcript.SESSIONS_DIR", tmp_path):
-        r = TranscriptRecorder("output/test", persona="mybot")
-        r.add_turn("user", "session content")
-        path = r.save_session()
-        assert path.exists()
-        assert path.parent.name == "mybot"
-        content = path.read_text()
-        assert "session content" in content
-        assert "# Session: mybot" in content
+    r = TranscriptRecorder("output/test", persona="mybot", sessions_dir=tmp_path)
+    r.add_turn("user", "session content")
+    path = r.save_session()
+    assert path.exists()
+    assert path.parent.name == "mybot"
+    content = path.read_text()
+    assert "session content" in content
+    assert "# Session: mybot" in content
 
 
 def test_save_session_appends_with_separator(tmp_path):
-    with patch("voxcat.transcript.SESSIONS_DIR", tmp_path):
-        r1 = TranscriptRecorder("output/test", persona="bot")
-        r1.add_turn("user", "first session")
-        path = r1.save_session()
+    r1 = TranscriptRecorder("output/test", persona="bot", sessions_dir=tmp_path)
+    r1.add_turn("user", "first session")
+    path = r1.save_session()
 
-        r2 = TranscriptRecorder("output/test", persona="bot")
-        r2.add_turn("user", "continued session")
-        path2 = r2.save_session(append_to=path.name)
-        assert path2 == path
-        content = path.read_text()
-        assert "first session" in content
-        assert "---" in content
-        assert "Continued:" in content
-        assert "continued session" in content
+    r2 = TranscriptRecorder("output/test", persona="bot", sessions_dir=tmp_path)
+    r2.add_turn("user", "continued session")
+    path2 = r2.save_session(append_to=path.name)
+    assert path2 == path
+    content = path.read_text()
+    assert "first session" in content
+    assert "---" in content
+    assert "Continued:" in content
+    assert "continued session" in content

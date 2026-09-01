@@ -141,40 +141,19 @@ def set_config(config: dict):
     _config = config
 
 
-async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
-    config = _config or load_config()
-
-    body = runner_args.body or {}
-    persona_name = body.get("persona") or config["persona"]["default"]
-    if persona_name not in config["persona"]["profiles"]:
-        logger.warning(f"Unknown persona '{persona_name}', falling back to default")
-        persona_name = config["persona"]["default"]
-    persona = config["persona"]["profiles"][persona_name]
-    voice_config = config["voice"]
-    voice_mode = voice_config.get("mode", "live")
-    output_dir = persona.get("output", {}).get("directory", f"output/{persona_name}")
-    builtin_tools = persona.get("tools", {}).get("builtin", [])
-    mcp_server_names = persona.get("tools", {}).get("mcp_servers", [])
-
-    recorder = TranscriptRecorder(output_dir, persona=persona_name)
-    tools_config = config.get("tools", {})
-    tools = build_tools(builtin_tools, output_dir, recorder, tools_config=tools_config)
-
-    mcp_clients = []
-    if mcp_server_names:
-        mcp_config = config.get("mcp_servers", {})
-        mcp_tools, mcp_clients = await connect_mcp_servers(mcp_server_names, mcp_config)
-        tools.extend(mcp_tools)
-
+def build_pipeline(
+    transport: BaseTransport, persona: dict, voice_config: dict,
+    tools: list, system_instruction: str, output_dir: str,
+) -> tuple:
+    """Build Pipecat pipeline. Returns (Pipeline, LLMContext, user_agg, assistant_agg)."""
     is_silent = persona.get("silent", False)
-    system_instruction = build_system_instruction(persona)
+    voice_mode = voice_config.get("mode", "live")
+
     if is_silent and voice_mode == "live":
-        logger.warning(f"Persona '{persona_name}' is silent but live mode cannot mute TTS — auto-switching to split mode")
+        logger.warning("Silent persona in live mode — auto-switching to split")
         voice_mode = "split"
-    logger.info(f"Persona: {persona_name} | Mode: {voice_mode} | Silent: {is_silent} | Tools: {len(tools)} | Output: {output_dir}")
 
     result_spill = ResultSpillProcessor(output_dir)
-
     context = LLMContext(tools=tools)
     context_guard = ContextGuardProcessor(context)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
@@ -254,6 +233,46 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             transport.output(),
             assistant_aggregator,
         ])
+
+    return pipeline, context, user_aggregator, assistant_aggregator
+
+
+async def run_bot(transport: BaseTransport, runner_args: RunnerArguments, config: dict | None = None):
+    # config param for tests; _config set by cli.py for pipecat runner path
+    if config is None:
+        config = _config
+    if config is None:
+        config = load_config()
+
+    body = runner_args.body or {}
+    persona_name = body.get("persona") or config["persona"]["default"]
+    if persona_name not in config["persona"]["profiles"]:
+        logger.warning(f"Unknown persona '{persona_name}', falling back to default")
+        persona_name = config["persona"]["default"]
+    persona = config["persona"]["profiles"][persona_name]
+    voice_config = config["voice"]
+    output_dir = persona.get("output", {}).get("directory", f"output/{persona_name}")
+    builtin_tools = persona.get("tools", {}).get("builtin", [])
+    mcp_server_names = persona.get("tools", {}).get("mcp_servers", [])
+    is_silent = persona.get("silent", False)
+
+    sessions_dir = config.get("sessions_dir", "sessions")
+    recorder = TranscriptRecorder(output_dir, persona=persona_name, sessions_dir=sessions_dir)
+    tools_config = config.get("tools", {})
+    tools = build_tools(builtin_tools, output_dir, recorder, tools_config=tools_config)
+
+    mcp_clients = []
+    if mcp_server_names:
+        mcp_config = config.get("mcp_servers", {})
+        mcp_tools, mcp_clients = await connect_mcp_servers(mcp_server_names, mcp_config)
+        tools.extend(mcp_tools)
+
+    system_instruction = build_system_instruction(persona)
+    logger.info(f"Persona: {persona_name} | Mode: {voice_config.get('mode', 'live')} | Silent: {is_silent} | Tools: {len(tools)} | Output: {output_dir}")
+
+    pipeline, context, user_aggregator, assistant_aggregator = build_pipeline(
+        transport, persona, voice_config, tools, system_instruction, output_dir,
+    )
 
     worker = PipelineWorker(
         pipeline,
