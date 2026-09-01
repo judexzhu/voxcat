@@ -83,6 +83,8 @@ For working on voxcat itself (frontend hot reload, local Python changes):
 ```bash
 git clone https://github.com/judexzhu/voxcat && cd voxcat
 uv sync                              # Python deps
+uv run voxcat init                   # create ~/.config/voxcat/ if not already present
+# Edit ~/.config/voxcat/.env with your GOOGLE_API_KEY
 
 # Terminal 1 — backend (picks up local source changes)
 uv run voxcat                        # serves on :7860

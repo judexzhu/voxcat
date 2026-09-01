@@ -122,6 +122,13 @@ def main():
     config = load_config(config_path)
 
     personas_dir = CONFIG_DIR / "personas"
+    if not personas_dir.is_dir():
+        try:
+            pkg_personas = Path(str(resources.files("voxcat") / "personas"))
+            if pkg_personas.is_dir():
+                personas_dir = pkg_personas
+        except (TypeError, FileNotFoundError):
+            pass
     profiles = load_personas(personas_dir, config)
     config.setdefault("persona", {})["profiles"] = profiles
     available_personas = list(profiles.keys())

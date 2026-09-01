@@ -32,10 +32,17 @@ from .mcp_connect import connect_mcp_servers
 from .tools import build_tools
 from .transcript import TranscriptRecorder
 
-COMMON_INSTRUCTION = (
+_COMMON_VOICE = (
     "Before calling ANY tool, say a brief phrase — never go silent while a tool runs.\n"
-    "NEVER call the same tool twice with the same arguments. If a tool already returned results, use those results — do not re-call it.\n"
     "After a tool returns, ALWAYS speak the result to the user before calling another tool.\n"
+)
+
+_COMMON_SILENT = (
+    "After a tool returns, continue listening. Do not speak unless the user asks.\n"
+)
+
+_COMMON_BASE = (
+    "NEVER call the same tool twice with the same arguments. If a tool already returned results, use those results — do not re-call it.\n"
     "When asked to save, don't confirm — just save.\n"
     "VOICE RULES — you are a spoken voice agent, not a text chatbot:\n"
     "- Never use markdown formatting: no **bold**, no - bullets, no # headers, no backticks.\n"
@@ -43,6 +50,14 @@ COMMON_INSTRUCTION = (
     "- Speak numbers naturally: 'case oh-four-five-two-seven' not 'case zero four five two seven'. Spell out version numbers.\n"
     "- If the user interrupts, answer the interruption. Do not restart or repeat your previous thought."
 )
+
+COMMON_INSTRUCTION = _COMMON_VOICE + _COMMON_BASE
+
+
+def build_system_instruction(persona: dict) -> str:
+    is_silent = persona.get("silent", False)
+    prefix = _COMMON_SILENT if is_silent else _COMMON_VOICE
+    return f"{prefix}{_COMMON_BASE}\n\n{persona['instruction']}"
 
 TTS_STYLES = ("extremely fast", "whispering", "shouting", "sarcasm", "robotic")
 
@@ -151,9 +166,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         mcp_tools, mcp_clients = await connect_mcp_servers(mcp_server_names, mcp_config)
         tools.extend(mcp_tools)
 
-    system_instruction = f"{COMMON_INSTRUCTION}\n\n{persona['instruction']}"
-
     is_silent = persona.get("silent", False)
+    system_instruction = build_system_instruction(persona)
     if is_silent and voice_mode == "live":
         logger.warning(f"Persona '{persona_name}' is silent but live mode cannot mute TTS — auto-switching to split mode")
         voice_mode = "split"

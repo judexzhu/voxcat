@@ -25,11 +25,16 @@ MODEL = "gemini-3.7-flash"
 
 def load_persona_config(name: str) -> dict:
     from pathlib import Path
-    import yaml
+    from voxcat.personas import load_personas
 
-    config_path = Path(__file__).parent.parent / "src" / "voxcat" / "config.yaml.example"
-    config = yaml.safe_load(config_path.read_text())
-    return config["persona"]["profiles"][name]
+    personas_dir = Path(__file__).parent.parent / "src" / "voxcat" / "personas"
+    profiles = load_personas(personas_dir, {"persona": {"profiles": {}}})
+    return profiles[name]
+
+
+def build_system_instruction(persona: dict) -> str:
+    from voxcat.bot import build_system_instruction as _build
+    return _build(persona)
 
 
 async def chat(system_instruction: str, turns: list[str]) -> list[str]:
@@ -65,7 +70,7 @@ def word_count(text: str) -> int:
 @pytest.mark.asyncio
 async def test_thinking_partner_word_budget():
     persona = load_persona_config("thinking-partner")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "I want to build a personal finance app",
         "It should track expenses and show charts",
     ])
@@ -77,7 +82,7 @@ async def test_thinking_partner_word_budget():
 @pytest.mark.asyncio
 async def test_thinking_partner_no_markdown():
     persona = load_persona_config("thinking-partner")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "What are the trade-offs between React and Vue for a dashboard?",
     ])
     for r in responses:
@@ -89,7 +94,7 @@ async def test_thinking_partner_no_markdown():
 @pytest.mark.asyncio
 async def test_devils_advocate_word_budget():
     persona = load_persona_config("devils-advocate")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "We should rewrite our monolith in microservices",
         "But it will improve scalability",
     ])
@@ -101,7 +106,7 @@ async def test_devils_advocate_word_budget():
 @pytest.mark.asyncio
 async def test_devils_advocate_concedes():
     persona = load_persona_config("devils-advocate")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "We should add input validation on our public API endpoints",
         "It prevents injection attacks and malformed data from reaching the database",
         "Every major framework recommends it and we've had two incidents without it",
@@ -116,7 +121,7 @@ async def test_devils_advocate_concedes():
 @pytest.mark.asyncio
 async def test_devils_advocate_no_markdown():
     persona = load_persona_config("devils-advocate")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "We should migrate our database to PostgreSQL",
     ])
     for r in responses:
@@ -128,7 +133,7 @@ async def test_devils_advocate_no_markdown():
 @pytest.mark.asyncio
 async def test_sre_word_budget():
     persona = load_persona_config("sre")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "We're seeing high latency on the API gateway",
     ])
     for r in responses:
@@ -139,7 +144,7 @@ async def test_sre_word_budget():
 @pytest.mark.asyncio
 async def test_sre_no_markdown():
     persona = load_persona_config("sre")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "What should I check when a cluster node is not ready?",
     ])
     for r in responses:
@@ -149,7 +154,7 @@ async def test_sre_no_markdown():
 @pytest.mark.asyncio
 async def test_sre_no_urls():
     persona = load_persona_config("sre")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "Where can I find documentation on OpenShift networking?",
     ])
     for r in responses:
@@ -161,7 +166,7 @@ async def test_sre_no_urls():
 @pytest.mark.asyncio
 async def test_note_taker_stays_silent():
     persona = load_persona_config("note-taker")
-    responses = await chat(persona["instruction"], [
+    responses = await chat(build_system_instruction(persona), [
         "So the main issue is that our deployment pipeline takes 45 minutes",
         "We think the bottleneck is the integration test suite",
     ])

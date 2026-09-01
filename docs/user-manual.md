@@ -119,12 +119,14 @@ For modifying the frontend or backend source:
 ```bash
 git clone https://github.com/judexzhu/voxcat && cd voxcat
 uv sync
+uv run voxcat init                   # create ~/.config/voxcat/ if not already present
+# Edit ~/.config/voxcat/.env with your GOOGLE_API_KEY
 
-# Terminal 1: frontend with hot reload (requires Node.js 20+)
-cd client && npm ci && npm run dev
-
-# Terminal 2: backend
+# Terminal 1: backend
 uv run voxcat
+
+# Terminal 2: frontend with hot reload (requires Node.js 20+)
+cd client && npm ci && npm run dev
 ```
 
 In development mode, open `http://localhost:5173`. The Vite dev server proxies API calls to the backend on port 7860.
