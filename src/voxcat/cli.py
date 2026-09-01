@@ -78,18 +78,9 @@ def main():
         init_project()
         return
 
-    # Logging: file
     log_dir = DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
-    logger.add(
-        log_dir / "voxcat_{time:YYYY-MM-DD}.log",
-        rotation="1 day",
-        retention="7 days",
-        level=args.log_level,
-        format="{time:HH:mm:ss.SSS} | {level:<7} | {name}:{function}:{line} | {message}",
-        filter=_not_prebuilt,
-    )
-    logger.info(f"Logs: {log_dir}")
+    log_level = args.log_level
 
     env_path = CONFIG_DIR / ".env"
     if env_path.exists():
@@ -148,6 +139,19 @@ def main():
 
     from fastapi.staticfiles import StaticFiles
     from pipecat.runner.run import app, main as pipecat_main
+
+    # pipecat import adds its own loguru handler — reset to ours with filter
+    logger.remove()
+    logger.add(sys.stderr, filter=_not_prebuilt)
+    logger.add(
+        log_dir / "voxcat_{time:YYYY-MM-DD}.log",
+        rotation="1 day",
+        retention="7 days",
+        level=log_level,
+        format="{time:HH:mm:ss.SSS} | {level:<7} | {name}:{function}:{line} | {message}",
+        filter=_not_prebuilt,
+    )
+    logger.info(f"Logs: {log_dir}")
 
     from .api import register_routes
 
